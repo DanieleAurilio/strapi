@@ -1,7 +1,9 @@
 import React from 'react';
-import { useIntl } from 'react-intl';
+
+import { HeaderLayout } from '@strapi/design-system';
 import { SettingsPageTitle } from '@strapi/helper-plugin';
-import { HeaderLayout } from '@strapi/design-system/Layout';
+import { useIntl } from 'react-intl';
+
 import getTrad from '../../../utils/getTrad';
 
 const EmailHeader = () => {
@@ -12,18 +14,18 @@ const EmailHeader = () => {
       <SettingsPageTitle
         name={formatMessage({
           id: getTrad('Settings.email.plugin.title'),
-          defaultMessage: 'Email settings',
+          defaultMessage: 'Configuration',
         })}
       />
       <HeaderLayout
         id="title"
         title={formatMessage({
           id: getTrad('Settings.email.plugin.title'),
-          defaultMessage: 'Email settings',
+          defaultMessage: 'Configuration',
         })}
         subtitle={formatMessage({
           id: getTrad('Settings.email.plugin.subTitle'),
-          defaultMessage: 'Test the settings for the email plugin',
+          defaultMessage: 'Test the settings for the Email plugin',
         })}
       />
     </>

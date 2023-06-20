@@ -1,17 +1,22 @@
 import React, { useEffect, useRef } from 'react';
+
+import CodeMirror from 'codemirror5';
 import PropTypes from 'prop-types';
-import CodeMirror from 'codemirror';
-import 'codemirror/addon/display/placeholder';
+
 import PreviewWysiwyg from '../PreviewWysiwyg';
+
 import { EditorStylesContainer } from './EditorStylesContainer';
-import { EditorAndPreviewWrapper } from './WysiwygStyles';
 import newlineAndIndentContinueMarkdownList from './utils/continueList';
+import { EditorAndPreviewWrapper } from './WysiwygStyles';
+
+import 'codemirror5/addon/display/placeholder';
 
 const Editor = ({
   disabled,
   editorRef,
   error,
   isPreviewMode,
+  isExpandMode,
   name,
   onChange,
   placeholder,
@@ -25,23 +30,24 @@ const Editor = ({
       lineWrapping: true,
       extraKeys: {
         Enter: 'newlineAndIndentContinueMarkdownList',
-        // Leaving this commented for now
-        // Tab: false,
-        // 'Shift-Tab': false,
+        Tab: false,
+        'Shift-Tab': false,
       },
       readOnly: false,
       smartIndent: false,
       placeholder,
+      spellcheck: true,
+      inputStyle: 'contenteditable',
     });
 
     CodeMirror.commands.newlineAndIndentContinueMarkdownList = newlineAndIndentContinueMarkdownList;
-    editorRef.current.on('change', doc => {
+    editorRef.current.on('change', (doc) => {
       onChangeRef.current({ target: { name, value: doc.getValue(), type: 'wysiwyg' } });
     });
   }, [editorRef, textareaRef, name, placeholder]);
 
   useEffect(() => {
-    if (value && !editorRef.current.state.focused) {
+    if (value && !editorRef.current.hasFocus()) {
       editorRef.current.setValue(value);
     }
   }, [editorRef, value]);
@@ -65,7 +71,7 @@ const Editor = ({
 
   return (
     <EditorAndPreviewWrapper>
-      <EditorStylesContainer disabled={disabled || isPreviewMode}>
+      <EditorStylesContainer isExpandMode={isExpandMode} disabled={disabled || isPreviewMode}>
         <textarea ref={textareaRef} />
       </EditorStylesContainer>
       {isPreviewMode && <PreviewWysiwyg data={value} />}
@@ -77,6 +83,7 @@ Editor.defaultProps = {
   disabled: false,
   error: undefined,
   isPreviewMode: false,
+  isExpandMode: false,
   placeholder: '',
   value: '',
 };
@@ -86,6 +93,7 @@ Editor.propTypes = {
   editorRef: PropTypes.shape({ current: PropTypes.any }).isRequired,
   error: PropTypes.string,
   isPreviewMode: PropTypes.bool,
+  isExpandMode: PropTypes.bool,
   name: PropTypes.string.isRequired,
   onChange: PropTypes.func.isRequired,
   placeholder: PropTypes.string,

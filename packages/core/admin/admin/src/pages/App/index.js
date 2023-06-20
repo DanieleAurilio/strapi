@@ -4,38 +4,61 @@
  *
  */
 
-import React, { useEffect, useState, useMemo, lazy, Suspense } from 'react';
-import { Switch, Route } from 'react-router-dom';
+import React, { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+
+import { SkipToContent } from '@strapi/design-system';
 import {
-  LoadingIndicatorPage,
   auth,
-  request,
+  LoadingIndicatorPage,
+  prefixFileUrlWithBackendUrl,
+  TrackingProvider,
+  useAppInfo,
+  useFetchClient,
   useNotification,
-  TrackingContext,
 } from '@strapi/helper-plugin';
-import { SkipToContent } from '@strapi/design-system/Main';
 import { useIntl } from 'react-intl';
+import { Route, Switch } from 'react-router-dom';
+
 import PrivateRoute from '../../components/PrivateRoute';
+import { useConfigurations } from '../../hooks';
+import { useEnterprise } from '../../hooks/useEnterprise';
 import { createRoute, makeUniqueRoutes } from '../../utils';
 import AuthPage from '../AuthPage';
 import NotFoundPage from '../NotFoundPage';
+import UseCasePage from '../UseCasePage';
+
+import { ROUTES_CE } from './constants';
 import { getUID } from './utils';
-import routes from './utils/routes';
 
 const AuthenticatedApp = lazy(() =>
   import(/* webpackChunkName: "Admin-authenticatedApp" */ '../../components/AuthenticatedApp')
 );
 
 function App() {
+  const routes = useEnterprise(
+    ROUTES_CE,
+    async () => (await import('../../../../ee/admin/pages/App/constants')).ROUTES_EE,
+    {
+      defaultValue: [],
+    }
+  );
   const toggleNotification = useNotification();
+  const { updateProjectSettings } = useConfigurations();
   const { formatMessage } = useIntl();
-  const [{ isLoading, hasAdmin, uuid }, setState] = useState({ isLoading: true, hasAdmin: false });
+  const [{ isLoading, hasAdmin, uuid, deviceId }, setState] = useState({
+    isLoading: true,
+    hasAdmin: false,
+  });
+  const appInfo = useAppInfo();
+  const { get, post } = useFetchClient();
 
   const authRoutes = useMemo(() => {
     return makeUniqueRoutes(
       routes.map(({ to, Component, exact }) => createRoute(Component, to, exact))
     );
-  }, []);
+  }, [routes]);
+
+  const [telemetryProperties, setTelemetryProperties] = useState(null);
 
   useEffect(() => {
     const currentToken = auth.getToken();
@@ -43,11 +66,10 @@ function App() {
     const renewToken = async () => {
       try {
         const {
-          data: { token },
-        } = await request('/admin/renew-token', {
-          method: 'POST',
-          body: { token: currentToken },
-        });
+          data: {
+            data: { token },
+          },
+        } = await post('/admin/renew-token', { token: currentToken });
         auth.updateToken(token);
       } catch (err) {
         // Refresh app
@@ -59,36 +81,55 @@ function App() {
     if (currentToken) {
       renewToken();
     }
-  }, []);
+  }, [post]);
 
   useEffect(() => {
     const getData = async () => {
       try {
         const {
-          data: { hasAdmin, uuid },
-        } = await request('/admin/init', { method: 'GET' });
+          data: {
+            data: { hasAdmin, uuid, menuLogo, authLogo },
+          },
+        } = await get(`/admin/init`);
+
+        updateProjectSettings({
+          menuLogo: prefixFileUrlWithBackendUrl(menuLogo),
+          authLogo: prefixFileUrlWithBackendUrl(authLogo),
+        });
+
+        const deviceId = await getUID();
 
         if (uuid) {
-          try {
-            const deviceId = await getUID();
+          const {
+            data: { data: properties },
+          } = await get(`/admin/telemetry-properties`, {
+            // NOTE: needed because the interceptors of the fetchClient redirect to /login when receive a 401 and it would end up in an infinite loop when the user doesn't have a session.
+            validateStatus: (status) => status < 500,
+          });
 
-            fetch('https://analytics.strapi.io/track', {
-              method: 'POST',
-              body: JSON.stringify({
-                event: 'didInitializeAdministration',
-                uuid,
-                deviceId,
-              }),
+          setTelemetryProperties(properties);
+
+          try {
+            const event = 'didInitializeAdministration';
+            await post('https://analytics.strapi.io/api/v2/track', {
+              // This event is anonymous
+              event,
+              userId: '',
+              deviceId,
+              eventPropeties: {},
+              userProperties: { environment: appInfo.currentEnvironment },
+              groupProperties: { ...properties, projectId: uuid },
+            }, {
               headers: {
-                'Content-Type': 'application/json',
-              },
+                'X-Strapi-Event': event,
+              }
             });
           } catch (e) {
             // Silent.
           }
         }
 
-        setState({ isLoading: false, hasAdmin, uuid });
+        setState({ isLoading: false, hasAdmin, uuid, deviceId });
       } catch (err) {
         toggleNotification({
           type: 'warning',
@@ -98,9 +139,19 @@ function App() {
     };
 
     getData();
-  }, [toggleNotification]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toggleNotification, updateProjectSettings]);
 
-  const setHasAdmin = hasAdmin => setState(prev => ({ ...prev, hasAdmin }));
+  const setHasAdmin = (hasAdmin) => setState((prev) => ({ ...prev, hasAdmin }));
+
+  const trackingInfo = useMemo(
+    () => ({
+      uuid,
+      telemetryProperties,
+      deviceId,
+    }),
+    [uuid, telemetryProperties, deviceId]
+  );
 
   if (isLoading) {
     return <LoadingIndicatorPage />;
@@ -109,20 +160,21 @@ function App() {
   return (
     <Suspense fallback={<LoadingIndicatorPage />}>
       <SkipToContent>{formatMessage({ id: 'skipToContent' })}</SkipToContent>
-      <TrackingContext.Provider value={uuid}>
+      <TrackingProvider value={trackingInfo}>
         <Switch>
           {authRoutes}
           <Route
             path="/auth/:authType"
-            render={routerProps => (
+            render={(routerProps) => (
               <AuthPage {...routerProps} setHasAdmin={setHasAdmin} hasAdmin={hasAdmin} />
             )}
             exact
           />
+          <PrivateRoute path="/usecase" component={UseCasePage} />
           <PrivateRoute path="/" component={AuthenticatedApp} />
           <Route path="" component={NotFoundPage} />
         </Switch>
-      </TrackingContext.Provider>
+      </TrackingProvider>
     </Suspense>
   );
 }

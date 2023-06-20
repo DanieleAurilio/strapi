@@ -1,9 +1,12 @@
 import React from 'react';
+
 import PropTypes from 'prop-types';
-import BaseLogin from './BaseLogin';
+
 import UnauthenticatedLayout from '../../../../layouts/UnauthenticatedLayout';
 
-const Login = loginProps => {
+import BaseLogin from './BaseLogin';
+
+const Login = (loginProps) => {
   return (
     <UnauthenticatedLayout>
       <BaseLogin {...loginProps} />
@@ -12,7 +15,7 @@ const Login = loginProps => {
 };
 
 Login.defaultProps = {
-  onSubmit: e => e.preventDefault(),
+  onSubmit: (e) => e.preventDefault(),
 };
 
 Login.propTypes = {

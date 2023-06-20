@@ -5,15 +5,13 @@
  */
 
 import React from 'react';
+
+import { Box, Flex, ModalHeader, Typography } from '@strapi/design-system';
+import { Breadcrumbs, Crumb } from '@strapi/design-system/v2';
+import upperFirst from 'lodash/upperFirst';
 import PropTypes from 'prop-types';
 import { useIntl } from 'react-intl';
-import upperFirst from 'lodash/upperFirst';
-import { Breadcrumbs, Crumb } from '@strapi/design-system/Breadcrumbs';
-import { ModalHeader } from '@strapi/design-system/ModalLayout';
-import { Box } from '@strapi/design-system/Box';
-import { Flex } from '@strapi/design-system/Flex';
-import { Stack } from '@strapi/design-system/Stack';
-import { Typography } from '@strapi/design-system/Typography';
+
 import useDataManager from '../../hooks/useDataManager';
 import getTrad from '../../utils/getTrad';
 import AttributeIcon from '../AttributeIcon';
@@ -28,6 +26,7 @@ const FormModalHeader = ({
   forTarget,
   modalType,
   targetUid,
+  customFieldUid,
 }) => {
   const { formatMessage } = useIntl();
   const { modifiedData } = useDataManager();
@@ -91,7 +90,7 @@ const FormModalHeader = ({
     headers.push({ label: dynamicZoneTarget });
   }
 
-  if (modalType === 'attribute') {
+  if (modalType === 'attribute' || modalType === 'customField') {
     icon = attributeType;
     headers.push({ label: attributeName });
   }
@@ -105,35 +104,33 @@ const FormModalHeader = ({
     headers = [{ label }, { label: categoryName }];
   }
 
-  const breadcrumbsLabel = headers.map(({ label }) => label).join(',');
-
   return (
     <ModalHeader>
-      <Stack horizontal size={3}>
-        <AttributeIcon type={icon} />
+      <Flex gap={3}>
+        <AttributeIcon type={icon} customField={customFieldUid} />
 
-        <Breadcrumbs label={breadcrumbsLabel}>
-          {headers.map((header, index) => {
-            const label = upperFirst(header.label);
+        <Breadcrumbs label={headers.map(({ label }) => label).join(',')}>
+          {headers.map(({ label, info }, index, arr) => {
+            label = upperFirst(label);
 
             if (!label) {
               return null;
             }
 
-            const key = `${header.label}.${index}`;
+            const key = `${label}.${index}`;
 
-            if (header.info?.category) {
-              const content = `${label} (${upperFirst(header.info.category)} - ${upperFirst(
-                header.info.name
-              )})`;
-
-              return <Crumb key={key}>{content}</Crumb>;
+            if (info?.category) {
+              label = `${label} (${upperFirst(info.category)} - ${upperFirst(info.name)})`;
             }
 
-            return <Crumb key={key}>{label}</Crumb>;
+            return (
+              <Crumb isCurrent={index === arr.length - 1} key={key}>
+                {label}
+              </Crumb>
+            );
           })}
         </Breadcrumbs>
-      </Stack>
+      </Flex>
     </ModalHeader>
   );
 };
@@ -147,6 +144,7 @@ FormModalHeader.defaultProps = {
   forTarget: null,
   contentTypeKind: null,
   targetUid: null,
+  customFieldUid: null,
 };
 
 FormModalHeader.propTypes = {
@@ -159,6 +157,7 @@ FormModalHeader.propTypes = {
   forTarget: PropTypes.oneOf(['contentType', 'component', 'components']),
   modalType: PropTypes.string.isRequired,
   targetUid: PropTypes.string,
+  customFieldUid: PropTypes.string,
 };
 
 export default FormModalHeader;

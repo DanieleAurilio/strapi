@@ -1,4 +1,5 @@
 import cloneDeep from 'lodash/cloneDeep';
+
 import checkPermissions from './checkPermissions';
 
 const getGeneralLinks = async (permissions, generalSectionRawLinks, shouldUpdateStrapi) => {
@@ -9,7 +10,9 @@ const getGeneralLinks = async (permissions, generalSectionRawLinks, shouldUpdate
     (_, index) => generalSectionLinksPermissions[index]
   );
 
-  const settingsLinkIndex = authorizedGeneralSectionLinks.findIndex(obj => obj.to === '/settings');
+  const settingsLinkIndex = authorizedGeneralSectionLinks.findIndex(
+    (obj) => obj.to === '/settings'
+  );
 
   if (settingsLinkIndex === -1) {
     return [];

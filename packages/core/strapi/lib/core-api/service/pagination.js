@@ -13,20 +13,15 @@ const getLimitConfigDefaults = () => ({
 });
 
 /**
- * if there is max limit set and limit exceeds this number, return configured max limit
+ * Should maxLimit be used as the limit or not
  * @param {number} limit - limit you want to cap
  * @param {number?} maxLimit - maxlimit used has capping
- * @returns {number}
+ * @returns {boolean}
  */
-const applyMaxLimit = (limit, maxLimit) => {
-  if (maxLimit && (limit === -1 || limit > maxLimit)) {
-    return maxLimit;
-  }
+const shouldApplyMaxLimit = (limit, maxLimit = null, { isPagedPagination = false } = {}) =>
+  (!isPagedPagination && limit === -1) || (maxLimit && limit > maxLimit);
 
-  return limit;
-};
-
-const shouldCount = params => {
+const shouldCount = (params) => {
   if (has('pagination.withCount', params)) {
     const { withCount } = params.pagination;
 
@@ -50,10 +45,10 @@ const shouldCount = params => {
   return Boolean(strapi.config.get('api.rest.withCount', true));
 };
 
-const isOffsetPagination = pagination => has('start', pagination) || has('limit', pagination);
-const isPagedPagination = pagination => has('page', pagination) || has('pageSize', pagination);
+const isOffsetPagination = (pagination) => has('start', pagination) || has('limit', pagination);
+const isPagedPagination = (pagination) => has('page', pagination) || has('pageSize', pagination);
 
-const getPaginationInfo = params => {
+const getPaginationInfo = (params) => {
   const { defaultLimit, maxLimit } = getLimitConfigDefaults();
 
   const { pagination } = params;
@@ -81,21 +76,21 @@ const getPaginationInfo = params => {
 
     return {
       page: Math.max(1, toNumber(pagination.page || 1)),
-      pageSize: applyMaxLimit(pageSize, maxLimit),
+      pageSize: shouldApplyMaxLimit(pageSize, maxLimit, { isPagedPagination: true })
+        ? maxLimit
+        : Math.max(1, pageSize),
     };
   }
 
-  const limit = isUndefined(pagination.limit)
-    ? defaultLimit
-    : Math.max(1, toNumber(pagination.limit));
+  const limit = isUndefined(pagination.limit) ? defaultLimit : toNumber(pagination.limit);
 
   return {
     start: Math.max(0, toNumber(pagination.start || 0)),
-    limit: applyMaxLimit(limit, maxLimit),
+    limit: shouldApplyMaxLimit(limit, maxLimit) ? maxLimit || -1 : Math.max(1, limit),
   };
 };
 
-const convertPagedToStartLimit = pagination => {
+const convertPagedToStartLimit = (pagination) => {
   if (isPagedPagination(pagination)) {
     const { page, pageSize } = pagination;
     return {

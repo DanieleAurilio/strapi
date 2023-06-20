@@ -3,22 +3,30 @@
 const _ = require('lodash');
 const utils = require('@strapi/utils');
 const { getService } = require('../utils');
-const validateSettings = require('./validation/settings');
-const validateUploadBody = require('./validation/upload');
+const { FILE_MODEL_UID } = require('../constants');
+const validateUploadBody = require('./validation/content-api/upload');
 
 const { sanitize } = utils;
 const { ValidationError } = utils.errors;
 
 const sanitizeOutput = (data, ctx) => {
-  const schema = strapi.getModel('plugin::upload.file');
+  const schema = strapi.getModel(FILE_MODEL_UID);
   const { auth } = ctx.state;
 
   return sanitize.contentAPI.output(data, schema, { auth });
 };
+const sanitizeQuery = (data, ctx) => {
+  const schema = strapi.getModel(FILE_MODEL_UID);
+  const { auth } = ctx.state;
+
+  return sanitize.contentAPI.query(data, schema, { auth });
+};
 
 module.exports = {
   async find(ctx) {
-    const files = await getService('upload').findMany(ctx.query);
+    const sanitizedParams = await sanitizeQuery(ctx.query, ctx);
+
+    const files = await getService('upload').findMany(sanitizedParams);
 
     ctx.body = await sanitizeOutput(files, ctx);
   },
@@ -28,17 +36,14 @@ module.exports = {
       params: { id },
     } = ctx;
 
-    const file = await getService('upload').findOne(id);
+    const sanitizedParams = await sanitizeQuery(ctx.query, ctx);
+    const file = await getService('upload').findOne(id, sanitizedParams.populate);
 
     if (!file) {
       return ctx.notFound('file.notFound');
     }
 
     ctx.body = await sanitizeOutput(file, ctx);
-  },
-
-  async count(ctx) {
-    ctx.body = await getService('upload').count(ctx.query);
   },
 
   async destroy(ctx) {
@@ -55,24 +60,6 @@ module.exports = {
     await getService('upload').remove(file);
 
     ctx.body = await sanitizeOutput(file, ctx);
-  },
-
-  async updateSettings(ctx) {
-    const {
-      request: { body },
-    } = ctx;
-
-    const data = await validateSettings(body);
-
-    await getService('upload').setSettings(data);
-
-    ctx.body = { data };
-  },
-
-  async getSettings(ctx) {
-    const data = await getService('upload').getSettings();
-
-    ctx.body = { data };
   },
 
   async updateFileInfo(ctx) {
@@ -111,8 +98,21 @@ module.exports = {
       request: { body, files: { files } = {} },
     } = ctx;
 
+    const data = await validateUploadBody(body, Array.isArray(files));
+
+    const apiUploadFolderService = getService('api-upload-folder');
+
+    const apiUploadFolder = await apiUploadFolderService.getAPIUploadFolder();
+
+    if (Array.isArray(files)) {
+      data.fileInfo = data.fileInfo || [];
+      data.fileInfo = files.map((_f, i) => ({ ...data.fileInfo[i], folder: apiUploadFolder.id }));
+    } else {
+      data.fileInfo = { ...data.fileInfo, folder: apiUploadFolder.id };
+    }
+
     const uploadedFiles = await getService('upload').upload({
-      data: await validateUploadBody(body),
+      data,
       files,
     });
 
@@ -125,25 +125,14 @@ module.exports = {
       request: { files: { files } = {} },
     } = ctx;
 
-    if (id && (_.isEmpty(files) || files.size === 0)) {
-      return this.updateFileInfo(ctx);
-    }
-
     if (_.isEmpty(files) || files.size === 0) {
+      if (id) {
+        return this.updateFileInfo(ctx);
+      }
+
       throw new ValidationError('Files are empty');
     }
 
     await (id ? this.replaceFile : this.uploadFiles)(ctx);
-  },
-
-  async search(ctx) {
-    const { id } = ctx.params;
-    const entries = await strapi.query('plugin::upload.file').findMany({
-      where: {
-        $or: [{ hash: { $contains: id } }, { name: { $contains: id } }],
-      },
-    });
-
-    ctx.body = await sanitizeOutput(entries, ctx);
   },
 };

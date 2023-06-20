@@ -1,19 +1,20 @@
 import React from 'react';
-import { render, waitFor, screen, fireEvent } from '@testing-library/react';
-import { Router } from 'react-router-dom';
+
+import { lightTheme, ThemeProvider } from '@strapi/design-system';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { createMemoryHistory } from 'history';
-import { IntlProvider } from 'react-intl';
-import { QueryClient, QueryClientProvider } from 'react-query';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-import { ThemeProvider, lightTheme } from '@strapi/design-system';
-import ListSettingsView from '../index';
+import { IntlProvider } from 'react-intl';
+import { QueryClient, QueryClientProvider } from 'react-query';
+import { Router } from 'react-router-dom';
+
 import ModelsContext from '../../../contexts/ModelsContext';
+import ListSettingsView from '../index';
 
 jest.mock('@strapi/helper-plugin', () => ({
   ...jest.requireActual('@strapi/helper-plugin'),
   useNotification: jest.fn(),
-  useTracking: jest.fn(() => ({ trackUsage: jest.fn() })),
 }));
 
 const client = new QueryClient({
@@ -60,13 +61,13 @@ const layout = {
     },
     cover: {
       list: {
-        label: 'michka',
+        label: 'Cover',
         sortable: false,
       },
     },
     id: {
       list: {
-        label: 'hey',
+        label: 'id',
         sortable: true,
       },
     },
@@ -92,7 +93,7 @@ const layout = {
   uid: 'api::restaurant.restaurant',
 };
 
-const makeApp = history => (
+const makeApp = (history) => (
   <Router history={history}>
     <ModelsContext.Provider value={{ refetchData: jest.fn() }}>
       <QueryClientProvider client={client}>
@@ -121,14 +122,16 @@ describe('ADMIN | CM | LV | Configure the view', () => {
       expect(screen.getByText('Configure the view - Michka')).toBeInTheDocument()
     );
 
-    expect(container.firstChild).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 
   it('should keep plugins query params when arriving on the page and going back', async () => {
     const history = createMemoryHistory();
-    history.push(
-      '/content-manager/collectionType/api::category.category/configurations/list?plugins[i18n][locale]=fr'
-    );
+    act(() => {
+      history.push(
+        '/content-manager/collectionType/api::category.category/configurations/list?plugins[i18n][locale]=fr'
+      );
+    });
 
     const { container } = render(makeApp(history));
     await waitFor(() =>
@@ -145,7 +148,7 @@ describe('ADMIN | CM | LV | Configure the view', () => {
   it('should add field', async () => {
     const history = createMemoryHistory();
 
-    const { container } = render(makeApp(history), { container: document.body });
+    const { container } = render(makeApp(history));
 
     await waitFor(() =>
       expect(screen.getByText('Configure the view - Michka')).toBeInTheDocument()
@@ -153,9 +156,9 @@ describe('ADMIN | CM | LV | Configure the view', () => {
 
     fireEvent.mouseDown(screen.getByTestId('add-field'));
 
-    await waitFor(() => expect(screen.getByText('cover')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('Cover')).toBeInTheDocument());
 
-    fireEvent.mouseDown(screen.getByText('cover'));
+    fireEvent.mouseDown(screen.getByText('Cover'));
     fireEvent.mouseDown(screen.getByTestId('add-field'));
 
     expect(container).toMatchSnapshot();
@@ -180,7 +183,7 @@ describe('ADMIN | CM | LV | Configure the view', () => {
     it('should open edit modal', async () => {
       const history = createMemoryHistory();
 
-      render(makeApp(history), { container: document.body });
+      render(makeApp(history));
       await waitFor(() =>
         expect(screen.getByText('Configure the view - Michka')).toBeInTheDocument()
       );
@@ -192,10 +195,31 @@ describe('ADMIN | CM | LV | Configure the view', () => {
       ).toBeInTheDocument();
     });
 
+    it('should close edit modal onSubmit', async () => {
+      const history = createMemoryHistory();
+
+      const { queryByText } = render(makeApp(history));
+      await waitFor(() =>
+        expect(screen.getByText('Configure the view - Michka')).toBeInTheDocument()
+      );
+
+      fireEvent.click(screen.getByLabelText('Edit address'));
+
+      expect(
+        screen.getByText("This value overrides the label displayed in the table's head")
+      ).toBeInTheDocument();
+
+      fireEvent.click(screen.getByText('Finish'));
+
+      expect(
+        queryByText("This value overrides the label displayed in the table's head")
+      ).not.toBeInTheDocument();
+    });
+
     it('should not show sortable toggle input if field not sortable', async () => {
       const history = createMemoryHistory();
 
-      const { queryByText } = render(makeApp(history), { container: document.body });
+      const { queryByText } = render(makeApp(history));
       await waitFor(() =>
         expect(screen.getByText('Configure the view - Michka')).toBeInTheDocument()
       );
@@ -208,7 +232,7 @@ describe('ADMIN | CM | LV | Configure the view', () => {
     it('should show sortable toggle input if field sortable', async () => {
       const history = createMemoryHistory();
 
-      const { queryByTestId } = render(makeApp(history), { container: document.body });
+      const { queryByTestId } = render(makeApp(history));
       await waitFor(() =>
         expect(screen.getByText('Configure the view - Michka')).toBeInTheDocument()
       );

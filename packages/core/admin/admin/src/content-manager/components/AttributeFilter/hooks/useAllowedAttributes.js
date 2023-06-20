@@ -1,5 +1,5 @@
+import { findMatchingPermissions, useRBACProvider } from '@strapi/helper-plugin';
 import get from 'lodash/get';
-import { useRBACProvider, findMatchingPermissions } from '@strapi/helper-plugin';
 
 const NOT_ALLOWED_FILTERS = ['json', 'component', 'media', 'richtext', 'dynamiczone', 'password'];
 const TIMESTAMPS = ['createdAt', 'updatedAt'];
@@ -17,7 +17,7 @@ const useAllowedAttributes = (contentType, slug) => {
   const readPermissionForAttr = get(readPermissionsForSlug, ['0', 'properties', 'fields'], []);
   const attributesArray = Object.keys(get(contentType, ['attributes']), {});
   const allowedAttributes = attributesArray
-    .filter(attr => {
+    .filter((attr) => {
       const current = get(contentType, ['attributes', attr], {});
 
       if (!current.type) {

@@ -1,35 +1,46 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { useIntl } from 'react-intl';
+
 import {
-  SettingsPageTitle,
+  ContentLayout,
+  HeaderLayout,
+  IconButton,
+  Layout,
+  Main,
+  Table,
+  Tbody,
+  Td,
+  Th,
+  Thead,
+  Tr,
+  Typography,
+  useNotifyAT,
+  VisuallyHidden,
+} from '@strapi/design-system';
+import {
+  CheckPagePermissions,
   LoadingIndicatorPage,
-  useTracking,
+  onRowClick,
+  SettingsPageTitle,
+  stopPropagation,
+  useFocusWhenNavigate,
   useNotification,
   useOverlayBlocker,
-  CheckPagePermissions,
   useRBAC,
-  useFocusWhenNavigate,
-  onRowClick,
-  stopPropagation,
+  useTracking,
 } from '@strapi/helper-plugin';
+import { Pencil } from '@strapi/icons';
 import has from 'lodash/has';
 import upperFirst from 'lodash/upperFirst';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { HeaderLayout, Layout, ContentLayout } from '@strapi/design-system/Layout';
-import { Main } from '@strapi/design-system/Main';
-import { useNotifyAT } from '@strapi/design-system/LiveRegions';
-import { Table, Thead, Tr, Th, Tbody, Td } from '@strapi/design-system/Table';
-import { Typography } from '@strapi/design-system/Typography';
-import { VisuallyHidden } from '@strapi/design-system/VisuallyHidden';
-import { IconButton } from '@strapi/design-system/IconButton';
-import Pencil from '@strapi/icons/Pencil';
-import { useQuery, useMutation, useQueryClient } from 'react-query';
-import forms from './utils/forms';
+import { useIntl } from 'react-intl';
+import { useMutation, useQuery, useQueryClient } from 'react-query';
+
+import FormModal from '../../components/FormModal';
+import { PERMISSIONS } from '../../constants';
+import { getTrad } from '../../utils';
+
 import { fetchData, putProvider } from './utils/api';
 import createProvidersArray from './utils/createProvidersArray';
-import { getTrad } from '../../utils';
-import pluginPermissions from '../../permissions';
-import FormModal from '../../components/FormModal';
+import forms from './utils/forms';
 
 export const ProvidersPage = () => {
   const { formatMessage } = useIntl();
@@ -45,7 +56,7 @@ export const ProvidersPage = () => {
   const { lockApp, unlockApp } = useOverlayBlocker();
 
   const updatePermissions = useMemo(() => {
-    return { update: pluginPermissions.updateProviders };
+    return { update: PERMISSIONS.updateProviders };
   }, []);
 
   const {
@@ -53,26 +64,26 @@ export const ProvidersPage = () => {
     allowedActions: { canUpdate },
   } = useRBAC(updatePermissions);
 
-  const { isLoading: isLoadingForData, data: modifiedData, isFetching } = useQuery(
-    'get-providers',
-    () => fetchData(toggleNotification),
-    {
-      onSuccess: () => {
-        notifyStatus(
-          formatMessage({
-            id: getTrad('Providers.data.loaded'),
-            defaultMessage: 'Providers have been loaded',
-          })
-        );
-      },
-      initialData: {},
-    }
-  );
+  const {
+    isLoading: isLoadingForData,
+    data: modifiedData,
+    isFetching,
+  } = useQuery('get-providers', () => fetchData(toggleNotification), {
+    onSuccess() {
+      notifyStatus(
+        formatMessage({
+          id: getTrad('Providers.data.loaded'),
+          defaultMessage: 'Providers have been loaded',
+        })
+      );
+    },
+    initialData: {},
+  });
 
   const isLoading = isLoadingForData || isFetching;
 
   const submitMutation = useMutation(putProvider, {
-    onSuccess: async () => {
+    async onSuccess() {
       await queryClient.invalidateQueries('get-providers');
       toggleNotification({
         type: 'info',
@@ -84,7 +95,7 @@ export const ProvidersPage = () => {
       handleToggleModal();
       unlockApp();
     },
-    onError: () => {
+    onError() {
       toggleNotification({
         type: 'warning',
         message: { id: 'notification.error' },
@@ -104,7 +115,7 @@ export const ProvidersPage = () => {
       return false;
     }
 
-    const providerToEdit = providers.find(obj => obj.name === providerToEditName);
+    const providerToEdit = providers.find((obj) => obj.name === providerToEditName);
 
     return has(providerToEdit, 'subdomain');
   }, [providers, providerToEditName]);
@@ -127,17 +138,17 @@ export const ProvidersPage = () => {
   }, [providerToEditName, isProviderWithSubdomain]);
 
   const handleToggleModal = () => {
-    setIsOpen(prev => !prev);
+    setIsOpen((prev) => !prev);
   };
 
-  const handleClickEdit = provider => {
+  const handleClickEdit = (provider) => {
     if (canUpdate) {
       setProviderToEditName(provider.name);
       handleToggleModal();
     }
   };
 
-  const handleSubmit = async values => {
+  const handleSubmit = async (values) => {
     setIsSubmiting(true);
 
     lockApp();
@@ -163,19 +174,12 @@ export const ProvidersPage = () => {
           <LoadingIndicatorPage />
         ) : (
           <ContentLayout>
-            <Table colCount={4} rowCount={rowCount + 1}>
+            <Table colCount={3} rowCount={rowCount + 1}>
               <Thead>
                 <Tr>
                   <Th>
                     <Typography variant="sigma" textColor="neutral600">
-                      <VisuallyHidden>
-                        {formatMessage({ id: getTrad('Providers.image'), defaultMessage: 'Image' })}
-                      </VisuallyHidden>
-                    </Typography>
-                  </Th>
-                  <Th>
-                    <Typography variant="sigma" textColor="neutral600">
-                      {formatMessage({ id: getTrad('Providers.name'), defaultMessage: 'Name' })}
+                      {formatMessage({ id: 'global.name', defaultMessage: 'Name' })}
                     </Typography>
                   </Th>
                   <Th>
@@ -187,7 +191,7 @@ export const ProvidersPage = () => {
                     <Typography variant="sigma">
                       <VisuallyHidden>
                         {formatMessage({
-                          id: getTrad('Providers.settings'),
+                          id: 'global.settings',
                           defaultMessage: 'Settings',
                         })}
                       </VisuallyHidden>
@@ -196,7 +200,7 @@ export const ProvidersPage = () => {
                 </Tr>
               </Thead>
               <Tbody>
-                {providers.map(provider => (
+                {providers.map((provider) => (
                   <Tr
                     key={provider.name}
                     {...onRowClick({
@@ -204,9 +208,6 @@ export const ProvidersPage = () => {
                       condition: canUpdate,
                     })}
                   >
-                    <Td width="">
-                      <FontAwesomeIcon icon={provider.icon} />
-                    </Td>
                     <Td width="45%">
                       <Typography fontWeight="semiBold" textColor="neutral800">
                         {provider.name}
@@ -219,11 +220,11 @@ export const ProvidersPage = () => {
                       >
                         {provider.enabled
                           ? formatMessage({
-                              id: getTrad('Providers.enabled'),
+                              id: 'global.enabled',
                               defaultMessage: 'Enabled',
                             })
                           : formatMessage({
-                              id: getTrad('Providers.disabled'),
+                              id: 'global.disabled',
                               defaultMessage: 'Disabled',
                             })}
                       </Typography>
@@ -266,7 +267,7 @@ export const ProvidersPage = () => {
 };
 
 const ProtectedProvidersPage = () => (
-  <CheckPagePermissions permissions={pluginPermissions.readProviders}>
+  <CheckPagePermissions permissions={PERMISSIONS.readProviders}>
     <ProvidersPage />
   </CheckPagePermissions>
 );

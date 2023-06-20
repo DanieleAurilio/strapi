@@ -7,9 +7,17 @@ const providerOptionsUpdateSchema = yup.object().shape({
   defaultRole: yup
     .strapiID()
     .required()
-    .test('is-valid-role', 'You must submit a valid default role', roleId => {
+    .test('is-valid-role', 'You must submit a valid default role', (roleId) => {
       return strapi.admin.services.role.exists({ id: roleId });
     }),
+  ssoLockedRoles: yup.array().of(
+    yup
+      .strapiID()
+      .required()
+      .test('is-valid-role', 'You must submit a valid role for the SSO Locked roles', (roleId) => {
+        return strapi.admin.services.role.exists({ id: roleId });
+      })
+  ),
 });
 
 module.exports = {

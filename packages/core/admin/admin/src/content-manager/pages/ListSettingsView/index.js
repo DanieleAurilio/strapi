@@ -1,33 +1,45 @@
 import React, { memo, useContext, useReducer, useState } from 'react';
-import PropTypes from 'prop-types';
-import { useMutation } from 'react-query';
-import isEqual from 'lodash/isEqual';
-import upperFirst from 'lodash/upperFirst';
-import pick from 'lodash/pick';
+
+import {
+  Box,
+  Button,
+  ContentLayout,
+  Divider,
+  HeaderLayout,
+  Layout,
+  Main,
+} from '@strapi/design-system';
+import {
+  ConfirmDialog,
+  Link,
+  useFetchClient,
+  useNotification,
+  useTracking,
+} from '@strapi/helper-plugin';
+import { ArrowLeft, Check } from '@strapi/icons';
 import get from 'lodash/get';
+import isEmpty from 'lodash/isEmpty';
+import isEqual from 'lodash/isEqual';
+import pick from 'lodash/pick';
+import upperFirst from 'lodash/upperFirst';
+import PropTypes from 'prop-types';
 import { stringify } from 'qs';
-import { useNotification, useTracking, ConfirmDialog } from '@strapi/helper-plugin';
 import { useIntl } from 'react-intl';
-import { Box } from '@strapi/design-system/Box';
-import { Divider } from '@strapi/design-system/Divider';
-import { Layout, HeaderLayout, ContentLayout } from '@strapi/design-system/Layout';
-import { Link } from '@strapi/design-system/Link';
-import { Main } from '@strapi/design-system/Main';
-import { Button } from '@strapi/design-system/Button';
-import Check from '@strapi/icons/Check';
-import ArrowLeft from '@strapi/icons/ArrowLeft';
-import { checkIfAttributeIsDisplayable, getTrad } from '../../utils';
+import { useMutation } from 'react-query';
+
 import ModelsContext from '../../contexts/ModelsContext';
 import { usePluginsQueryParams } from '../../hooks';
-import putCMSettingsLV from './utils/api';
+import { checkIfAttributeIsDisplayable, getTrad } from '../../utils';
+
+import EditFieldForm from './components/EditFieldForm';
 import Settings from './components/Settings';
 import SortDisplayedFields from './components/SortDisplayedFields';
-import EditFieldForm from './components/EditFieldForm';
+import { EXCLUDED_SORT_ATTRIBUTE_TYPES } from './constants';
 import init from './init';
 import reducer, { initialState } from './reducer';
-import { EXCLUDED_SORT_OPTIONS } from './utils/excludedSortOptions';
 
 const ListSettingsView = ({ layout, slug }) => {
+  const { put } = useFetchClient();
   const { formatMessage } = useIntl();
   const { trackUsage } = useTracking();
   const pluginsQueryParams = usePluginsQueryParams();
@@ -35,13 +47,13 @@ const ListSettingsView = ({ layout, slug }) => {
   const { refetchData } = useContext(ModelsContext);
 
   const [showWarningSubmit, setWarningSubmit] = useState(false);
-  const toggleWarningSubmit = () => setWarningSubmit(prevState => !prevState);
-  const [isModalFormOpen, setIsModalFormOpen] = useState(false);
-  const toggleModalForm = () => setIsModalFormOpen(prevState => !prevState);
+  const toggleWarningSubmit = () => setWarningSubmit((prevState) => !prevState);
   const [reducerState, dispatch] = useReducer(reducer, initialState, () =>
     init(initialState, layout)
   );
   const { fieldToEdit, fieldForm, initialData, modifiedData } = reducerState;
+  const isModalFormOpen = !isEmpty(fieldForm);
+
   const { attributes } = layout;
   const displayedFields = modifiedData.layouts.list;
 
@@ -77,7 +89,7 @@ const ListSettingsView = ({ layout, slug }) => {
     submitMutation.mutate(body);
   };
 
-  const handleAddField = item => {
+  const handleAddField = (item) => {
     dispatch({
       type: 'ADD_FIELD',
       item,
@@ -100,47 +112,48 @@ const ListSettingsView = ({ layout, slug }) => {
     }
   };
 
-  const handleSubmit = e => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     toggleWarningSubmit();
     trackUsage('willSaveContentTypeLayout');
   };
 
-  const handleClickEditField = fieldToEdit => {
+  const handleClickEditField = (fieldToEdit) => {
     dispatch({
       type: 'SET_FIELD_TO_EDIT',
       fieldToEdit,
     });
-    toggleModalForm();
   };
 
   const handleCloseModal = () => {
     dispatch({
       type: 'UNSET_FIELD_TO_EDIT',
     });
-    toggleModalForm();
   };
 
-  const handleSubmitFieldEdit = e => {
+  const handleSubmitFieldEdit = (e) => {
     e.preventDefault();
-    toggleModalForm();
     dispatch({
       type: 'SUBMIT_FIELD_FORM',
     });
+    handleCloseModal();
   };
 
-  const submitMutation = useMutation(body => putCMSettingsLV(body, slug), {
-    onSuccess: () => {
-      trackUsage('didEditListSettings');
-      refetchData();
-    },
-    onError: () => {
-      toggleNotification({
-        type: 'warning',
-        message: { id: 'notification.error' },
-      });
-    },
-  });
+  const submitMutation = useMutation(
+    (body) => put(`/content-manager/content-types/${slug}/configuration`, body),
+    {
+      onSuccess() {
+        trackUsage('didEditListSettings');
+        refetchData();
+      },
+      onError() {
+        toggleNotification({
+          type: 'warning',
+          message: { id: 'notification.error' },
+        });
+      },
+    }
+  );
   const { isLoading: isSubmittingForm } = submitMutation;
 
   const handleChangeEditLabel = ({ target: { name, value } }) => {
@@ -152,29 +165,16 @@ const ListSettingsView = ({ layout, slug }) => {
   };
 
   const listRemainingFields = Object.entries(attributes)
-    .reduce((acc, cur) => {
-      const [attrName, fieldSchema] = cur;
-
-      const isDisplayable = checkIfAttributeIsDisplayable(fieldSchema);
-      const isAlreadyDisplayed = displayedFields.includes(attrName);
-
-      if (isDisplayable && !isAlreadyDisplayed) {
-        acc.push(attrName);
-      }
-
-      return acc;
-    }, [])
+    .filter(
+      ([name, attribute]) =>
+        checkIfAttributeIsDisplayable(attribute) && !displayedFields.includes(name)
+    )
+    .map(([name]) => name)
     .sort();
 
-  const sortOptions = Object.entries(attributes).reduce((acc, cur) => {
-    const [name, { type }] = cur;
-
-    if (!EXCLUDED_SORT_OPTIONS.includes(type)) {
-      acc.push(name);
-    }
-
-    return acc;
-  }, []);
+  const sortOptions = Object.entries(attributes)
+    .filter(([, attribute]) => !EXCLUDED_SORT_ATTRIBUTE_TYPES.includes(attribute.type))
+    .map(([name]) => name);
 
   const move = (originalIndex, atIndex) => {
     dispatch({
@@ -191,17 +191,17 @@ const ListSettingsView = ({ layout, slug }) => {
           <HeaderLayout
             navigationAction={
               <Link startIcon={<ArrowLeft />} to={goBackUrl} id="go-back">
-                {formatMessage({ id: 'app.components.go-back', defaultMessage: 'Go back' })}
+                {formatMessage({ id: 'global.back', defaultMessage: 'Back' })}
               </Link>
             }
             primaryAction={
               <Button
-                size="L"
+                size="S"
                 startIcon={<Check />}
                 disabled={isEqual(modifiedData, initialData)}
                 type="submit"
               >
-                {formatMessage({ id: 'form.button.save', defaultMessage: 'Save' })}
+                {formatMessage({ id: 'global.save', defaultMessage: 'Save' })}
               </Button>
             }
             subtitle={formatMessage({

@@ -1,16 +1,14 @@
-import React, { useState } from 'react';
-import styled from 'styled-components';
+import React, { useEffect, useRef, useState } from 'react';
+
+import { Box, Flex, IconButton, MenuItem, SimpleMenu, Typography } from '@strapi/design-system';
+import { Plus } from '@strapi/icons';
 import { PropTypes } from 'prop-types';
 import { useIntl } from 'react-intl';
-import { Box } from '@strapi/design-system/Box';
-import { Flex } from '@strapi/design-system/Flex';
-import { Stack } from '@strapi/design-system/Stack';
-import { Typography } from '@strapi/design-system/Typography';
-import { SimpleMenu, MenuItem } from '@strapi/design-system/SimpleMenu';
-import { IconButton } from '@strapi/design-system/IconButton';
-import Plus from '@strapi/icons/Plus';
-import DraggableCard from './DraggableCard';
+import styled from 'styled-components';
+
 import { getTrad } from '../../../utils';
+
+import DraggableCard from './DraggableCard';
 
 const FlexWrapper = styled(Box)`
   flex: ${({ size }) => size};
@@ -36,6 +34,24 @@ const SortDisplayedFields = ({
 }) => {
   const { formatMessage } = useIntl();
   const [isDraggingSibling, setIsDraggingSibling] = useState(false);
+  const [lastAction, setLastAction] = useState(null);
+  const scrollableContainerRef = useRef();
+
+  function handleAddField(...args) {
+    setLastAction('add');
+    onAddField(...args);
+  }
+
+  function handleRemoveField(...args) {
+    setLastAction('remove');
+    onRemoveField(...args);
+  }
+
+  useEffect(() => {
+    if (lastAction === 'add' && scrollableContainerRef?.current) {
+      scrollableContainerRef.current.scrollLeft = scrollableContainerRef.current.scrollWidth;
+    }
+  }, [displayedFields, lastAction]);
 
   return (
     <>
@@ -56,8 +72,8 @@ const SortDisplayedFields = ({
         borderWidth="1px"
         hasRadius
       >
-        <ScrollableContainer size="1" paddingBottom={4}>
-          <Stack horizontal size={3}>
+        <ScrollableContainer size="1" paddingBottom={4} ref={scrollableContainerRef}>
+          <Flex gap={3}>
             {displayedFields.map((field, index) => (
               <DraggableCard
                 key={field}
@@ -65,13 +81,13 @@ const SortDisplayedFields = ({
                 isDraggingSibling={isDraggingSibling}
                 onMoveField={onMoveField}
                 onClickEditField={onClickEditField}
-                onRemoveField={e => onRemoveField(e, index)}
+                onRemoveField={(e) => handleRemoveField(e, index)}
                 name={field}
                 labelField={metadatas[field].list.label || field}
                 setIsDraggingSibling={setIsDraggingSibling}
               />
             ))}
-          </Stack>
+          </Flex>
         </ScrollableContainer>
         <SelectContainer size="auto" paddingBottom={4}>
           <SimpleMenu
@@ -84,9 +100,9 @@ const SortDisplayedFields = ({
             disabled={listRemainingFields.length <= 0}
             data-testid="add-field"
           >
-            {listRemainingFields.map(field => (
-              <MenuItem key={field} onClick={() => onAddField(field)}>
-                {field}
+            {listRemainingFields.map((field) => (
+              <MenuItem key={field} onClick={() => handleAddField(field)}>
+                {metadatas[field].list.label || field}
               </MenuItem>
             ))}
           </SimpleMenu>

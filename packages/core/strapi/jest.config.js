@@ -1,5 +1,6 @@
 'use strict';
 
 module.exports = {
-  testMatch: ['**/(*.)+(spec|test).js'],
+  preset: '../../../jest-preset.unit.js',
+  displayName: 'Core Strapi',
 };

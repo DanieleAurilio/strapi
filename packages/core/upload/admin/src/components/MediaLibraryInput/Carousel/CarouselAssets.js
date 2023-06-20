@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
+
+import { CarouselInput, CarouselSlide } from '@strapi/design-system';
 import PropTypes from 'prop-types';
 import { useIntl } from 'react-intl';
-import { Carousel, CarouselSlide } from '@strapi/design-system/Carousel';
-import getTrad from '../../../utils/getTrad';
+
 import { AssetDefinition } from '../../../constants';
-import { CarouselAssetActions } from './CarouselAssetActions';
-import { CarouselAsset } from './CarouselAsset';
-import { EmptyStateAsset } from './EmptyStateAsset';
+import getTrad from '../../../utils/getTrad';
 import { EditAssetDialog } from '../../EditAssetDialog';
+
+import { CarouselAsset } from './CarouselAsset';
+import { CarouselAssetActions } from './CarouselAssetActions';
+import { EmptyStateAsset } from './EmptyStateAsset';
 
 export const CarouselAssets = ({
   assets,
@@ -15,6 +18,7 @@ export const CarouselAssets = ({
   error,
   hint,
   label,
+  labelAction,
   onAddAsset,
   onDeleteAsset,
   onDeleteAssetFromMediaLibrary,
@@ -22,6 +26,7 @@ export const CarouselAssets = ({
   onEditAsset,
   onNext,
   onPrevious,
+  required,
   selectedAssetIndex,
   trackedLocation,
 }) => {
@@ -32,8 +37,10 @@ export const CarouselAssets = ({
 
   return (
     <>
-      <Carousel
+      <CarouselInput
         label={label}
+        labelAction={labelAction}
+        secondaryLabel={currentAsset?.name}
         selectedSlide={selectedAssetIndex}
         previousLabel={formatMessage({
           id: getTrad('mediaLibraryInput.actions.previousSlide'),
@@ -47,18 +54,16 @@ export const CarouselAssets = ({
         onPrevious={onPrevious}
         hint={hint}
         error={error}
+        required={required}
         actions={
           currentAsset ? (
             <CarouselAssetActions
               asset={currentAsset}
               onDeleteAsset={disabled ? undefined : onDeleteAsset}
-              onDeleteAssetFromMediaLibrary={onDeleteAssetFromMediaLibrary}
               onAddAsset={disabled ? undefined : onAddAsset}
               onEditAsset={onEditAsset ? () => setIsEditingAsset(true) : undefined}
             />
-          ) : (
-            undefined
-          )
+          ) : undefined
         }
       >
         {assets.length === 0 ? (
@@ -86,11 +91,11 @@ export const CarouselAssets = ({
             </CarouselSlide>
           ))
         )}
-      </Carousel>
+      </CarouselInput>
 
       {isEditingAsset && (
         <EditAssetDialog
-          onClose={editedAsset => {
+          onClose={(editedAsset) => {
             setIsEditingAsset(false);
 
             // The asset has been deleted
@@ -117,7 +122,9 @@ CarouselAssets.defaultProps = {
   disabled: false,
   error: undefined,
   hint: undefined,
+  labelAction: undefined,
   onDropAsset: undefined,
+  required: false,
   trackedLocation: undefined,
 };
 
@@ -127,6 +134,7 @@ CarouselAssets.propTypes = {
   error: PropTypes.string,
   hint: PropTypes.string,
   label: PropTypes.string.isRequired,
+  labelAction: PropTypes.node,
   onAddAsset: PropTypes.func.isRequired,
   onDeleteAsset: PropTypes.func.isRequired,
   onDeleteAssetFromMediaLibrary: PropTypes.func.isRequired,
@@ -134,6 +142,7 @@ CarouselAssets.propTypes = {
   onEditAsset: PropTypes.func.isRequired,
   onNext: PropTypes.func.isRequired,
   onPrevious: PropTypes.func.isRequired,
+  required: PropTypes.bool,
   selectedAssetIndex: PropTypes.number.isRequired,
   trackedLocation: PropTypes.string,
 };

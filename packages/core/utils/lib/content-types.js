@@ -1,7 +1,7 @@
 'use strict';
 
 const _ = require('lodash');
-const { has } = require('lodash/fp');
+const { getOr, has, union } = require('lodash/fp');
 
 const SINGLE_TYPE = 'singleType';
 const COLLECTION_TYPE = 'collectionType';
@@ -32,7 +32,7 @@ const constants = {
   COLLECTION_TYPE,
 };
 
-const getTimestamps = model => {
+const getTimestamps = (model) => {
   const attributes = [];
 
   if (has(CREATED_AT_ATTRIBUTE, model.attributes)) {
@@ -64,7 +64,7 @@ const isWritableAttribute = (model, attributeName) => {
   return getWritableAttributes(model).includes(attributeName);
 };
 
-const getNonVisibleAttributes = model => {
+const getNonVisibleAttributes = (model) => {
   const nonVisibleAttributes = _.reduce(
     model.attributes,
     (acc, attr, attrName) => (attr.visible === false ? acc.concat(attrName) : acc),
@@ -74,7 +74,7 @@ const getNonVisibleAttributes = model => {
   return _.uniq([ID_ATTRIBUTE, ...getTimestamps(model), ...nonVisibleAttributes]);
 };
 
-const getVisibleAttributes = model => {
+const getVisibleAttributes = (model) => {
   return _.difference(_.keys(model.attributes), getNonVisibleAttributes(model));
 };
 
@@ -82,37 +82,69 @@ const isVisibleAttribute = (model, attributeName) => {
   return getVisibleAttributes(model).includes(attributeName);
 };
 
-const hasDraftAndPublish = model => _.get(model, 'options.draftAndPublish', false) === true;
+const getOptions = (model) => _.assign({ draftAndPublish: false }, _.get(model, 'options', {}));
+const hasDraftAndPublish = (model) => _.get(model, 'options.draftAndPublish', false) === true;
 
 const isDraft = (data, model) =>
   hasDraftAndPublish(model) && _.get(data, PUBLISHED_AT_ATTRIBUTE) === null;
 
 const isSingleType = ({ kind = COLLECTION_TYPE }) => kind === SINGLE_TYPE;
 const isCollectionType = ({ kind = COLLECTION_TYPE }) => kind === COLLECTION_TYPE;
-const isKind = kind => model => model.kind === kind;
+const isKind = (kind) => (model) => model.kind === kind;
+
+const getStoredPrivateAttributes = (model) =>
+  union(
+    strapi?.config?.get('api.responses.privateAttributes', []) ?? [],
+    getOr([], 'options.privateAttributes', model)
+  );
 
 const getPrivateAttributes = (model = {}) => {
   return _.union(
-    strapi.config.get('api.responses.privateAttributes', []),
-    _.get(model, 'options.privateAttributes', []),
-    _.keys(_.pickBy(model.attributes, attr => !!attr.private))
+    getStoredPrivateAttributes(model),
+    _.keys(_.pickBy(model.attributes, (attr) => !!attr.private))
   );
 };
 
-const isPrivateAttribute = (model = {}, attributeName) => {
-  return model && model.privateAttributes && model.privateAttributes.includes(attributeName);
+const isPrivateAttribute = (model, attributeName) => {
+  if (model?.attributes?.[attributeName]?.private === true) {
+    return true;
+  }
+  return getStoredPrivateAttributes(model).includes(attributeName);
 };
 
-const isScalarAttribute = attribute => {
-  return !['component', 'relation', 'dynamiczone'].includes(attribute.type);
+const isScalarAttribute = (attribute) => {
+  return !['media', 'component', 'relation', 'dynamiczone'].includes(attribute?.type);
+};
+const isMediaAttribute = (attribute) => attribute?.type === 'media';
+const isRelationalAttribute = (attribute) => attribute?.type === 'relation';
+const isComponentAttribute = (attribute) => ['component', 'dynamiczone'].includes(attribute?.type);
+
+const isDynamicZoneAttribute = (attribute) => attribute?.type === 'dynamiczone';
+const isMorphToRelationalAttribute = (attribute) => {
+  return isRelationalAttribute(attribute) && attribute?.relation?.startsWith?.('morphTo');
 };
 
-const isMediaAttribute = attr => {
-  return attr.type === 'media';
+const getComponentAttributes = (schema) => {
+  return _.reduce(
+    schema.attributes,
+    (acc, attr, attrName) => {
+      if (isComponentAttribute(attr)) acc.push(attrName);
+      return acc;
+    },
+    []
+  );
 };
 
-const isRelationalAttribute = attribute => attribute.type === 'relation';
-const isComponentAttribute = attribute => ['component', 'dynamiczone'].includes(attribute.type);
+const getScalarAttributes = (schema) => {
+  return _.reduce(
+    schema.attributes,
+    (acc, attr, attrName) => {
+      if (isScalarAttribute(attr)) acc.push(attrName);
+      return acc;
+    },
+    []
+  );
+};
 
 /**
  * Checks if an attribute is of type `type`
@@ -128,7 +160,7 @@ const isTypedAttribute = (attribute, type) => {
  * @param {object} contentType
  * @returns {string}
  */
-const getContentTypeRoutePrefix = contentType => {
+const getContentTypeRoutePrefix = (contentType) => {
   return isSingleType(contentType)
     ? _.kebabCase(contentType.info.singularName)
     : _.kebabCase(contentType.info.pluralName);
@@ -139,11 +171,15 @@ module.exports = {
   isMediaAttribute,
   isRelationalAttribute,
   isComponentAttribute,
+  isDynamicZoneAttribute,
+  isMorphToRelationalAttribute,
   isTypedAttribute,
   getPrivateAttributes,
   isPrivateAttribute,
   constants,
   getNonWritableAttributes,
+  getComponentAttributes,
+  getScalarAttributes,
   getWritableAttributes,
   isWritableAttribute,
   getNonVisibleAttributes,
@@ -151,6 +187,7 @@ module.exports = {
   getTimestamps,
   isVisibleAttribute,
   hasDraftAndPublish,
+  getOptions,
   isDraft,
   isSingleType,
   isCollectionType,

@@ -1,6 +1,5 @@
+import { BaseButton, IconButton, IconButtonGroup } from '@strapi/design-system';
 import styled from 'styled-components';
-import { IconButtonGroup, IconButton } from '@strapi/design-system/IconButton';
-import { BaseButton } from '@strapi/design-system/BaseButton';
 
 // NAV BUTTONS
 export const CustomIconButton = styled(IconButton)`
@@ -45,6 +44,7 @@ export const IconButtonGroupMargin = styled(IconButtonGroup)`
 
 export const EditorAndPreviewWrapper = styled.div`
   position: relative;
+  height: calc(100% - 48px);
 `;
 
 // FOOTER

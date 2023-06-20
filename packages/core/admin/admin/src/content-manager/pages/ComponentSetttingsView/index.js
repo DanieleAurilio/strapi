@@ -1,14 +1,15 @@
 import React, { memo, useEffect, useMemo, useReducer } from 'react';
-import { useParams } from 'react-router-dom';
-import { CheckPagePermissions, LoadingIndicatorPage } from '@strapi/helper-plugin';
-import { useSelector, shallowEqual } from 'react-redux';
+
+import { CheckPagePermissions, LoadingIndicatorPage, useFetchClient } from '@strapi/helper-plugin';
 import axios from 'axios';
-import { axiosInstance } from '../../../core/utils';
-import { getRequestUrl, mergeMetasWithSchema } from '../../utils';
-import { makeSelectModelAndComponentSchemas } from '../App/selectors';
+import { shallowEqual, useSelector } from 'react-redux';
+import { useParams } from 'react-router-dom';
+
 import permissions from '../../../permissions';
-import crudReducer, { crudInitialState } from '../../sharedReducers/crudReducer/reducer';
 import { getData, getDataSucceeded } from '../../sharedReducers/crudReducer/actions';
+import crudReducer, { crudInitialState } from '../../sharedReducers/crudReducer/reducer';
+import { mergeMetasWithSchema } from '../../utils';
+import { makeSelectModelAndComponentSchemas } from '../App/selectors';
 import EditSettingsView from '../EditSettingsView';
 
 const cmPermissions = permissions.contentManager;
@@ -16,29 +17,27 @@ const cmPermissions = permissions.contentManager;
 const ComponentSettingsView = () => {
   const [{ isLoading, data: layout }, dispatch] = useReducer(crudReducer, crudInitialState);
   const schemasSelector = useMemo(makeSelectModelAndComponentSchemas, []);
-  const { schemas } = useSelector(state => schemasSelector(state), shallowEqual);
+  const { schemas } = useSelector((state) => schemasSelector(state), shallowEqual);
   const { uid } = useParams();
+  const { get } = useFetchClient();
 
   useEffect(() => {
     const CancelToken = axios.CancelToken;
     const source = CancelToken.source();
-
-    const fetchData = async source => {
+    const fetchData = async (source) => {
       try {
         dispatch(getData());
 
         const {
           data: { data },
-        } = await axiosInstance.get(getRequestUrl(`components/${uid}/configuration`), {
+        } = await get(`/content-manager/components/${uid}/configuration`, {
           cancelToken: source.token,
         });
-
         dispatch(getDataSucceeded(mergeMetasWithSchema(data, schemas, 'component')));
       } catch (err) {
         if (axios.isCancel(err)) {
           return;
         }
-
         console.error(err);
       }
     };
@@ -48,7 +47,7 @@ const ComponentSettingsView = () => {
     return () => {
       source.cancel('Operation canceled by the user.');
     };
-  }, [uid, schemas]);
+  }, [uid, schemas, get]);
 
   if (isLoading) {
     return <LoadingIndicatorPage />;

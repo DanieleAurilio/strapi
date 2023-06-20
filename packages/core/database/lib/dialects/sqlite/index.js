@@ -5,13 +5,13 @@ const fse = require('fs-extra');
 
 const errors = require('../../errors');
 const { Dialect } = require('../dialect');
-const SqliteSchmeaInspector = require('./schema-inspector');
+const SqliteSchemaInspector = require('./schema-inspector');
 
 class SqliteDialect extends Dialect {
   constructor(db) {
     super(db);
 
-    this.schemaInspector = new SqliteSchmeaInspector(db);
+    this.schemaInspector = new SqliteSchemaInspector(db);
   }
 
   configure() {
@@ -24,6 +24,10 @@ class SqliteDialect extends Dialect {
     fse.ensureDirSync(dbDir);
   }
 
+  useReturning() {
+    return true;
+  }
+
   async initialize() {
     await this.db.connection.raw('pragma foreign_keys = on');
   }
@@ -34,7 +38,6 @@ class SqliteDialect extends Dialect {
 
   getSqlType(type) {
     switch (type) {
-      // FIXME: enum must be dealt separately
       case 'enum': {
         return 'text';
       }
@@ -62,12 +65,16 @@ class SqliteDialect extends Dialect {
   transformErrors(error) {
     switch (error.errno) {
       case 19: {
-        throw new errors.NotNullConstraint(); // TODO: extract column name
+        throw new errors.NotNullError(); // TODO: extract column name
       }
       default: {
         super.transformErrors(error);
       }
     }
+  }
+
+  canAddIncrements() {
+    return false;
   }
 }
 

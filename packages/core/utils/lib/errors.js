@@ -1,3 +1,5 @@
+/* eslint-disable max-classes-per-file */
+
 'use strict';
 
 const { HttpError } = require('http-errors');
@@ -53,6 +55,23 @@ class ForbiddenError extends ApplicationError {
   }
 }
 
+class UnauthorizedError extends ApplicationError {
+  constructor(message, details) {
+    super(message, details);
+    this.name = 'UnauthorizedError';
+    this.message = message || 'Unauthorized';
+  }
+}
+
+class RateLimitError extends ApplicationError {
+  constructor(message, details) {
+    super(message, details);
+    this.name = 'RateLimitError';
+    this.message = message || 'Too many requests, please try again later.';
+    this.details = details || {};
+  }
+}
+
 class PayloadTooLargeError extends ApplicationError {
   constructor(message, details) {
     super(message, details);
@@ -61,11 +80,20 @@ class PayloadTooLargeError extends ApplicationError {
   }
 }
 
-class UnauthorizedError extends ApplicationError {
+class PolicyError extends ForbiddenError {
   constructor(message, details) {
     super(message, details);
-    this.name = 'UnauthorizedError';
-    this.message = message || 'Unauthorized';
+    this.name = 'PolicyError';
+    this.message = message || 'Policy Failed';
+    this.details = details || {};
+  }
+}
+
+class NotImplementedError extends ApplicationError {
+  constructor(message, details) {
+    super(message, details);
+    this.name = 'NotImplementedError';
+    this.message = message || 'This feature is not implemented yet';
   }
 }
 
@@ -77,6 +105,9 @@ module.exports = {
   PaginationError,
   NotFoundError,
   ForbiddenError,
-  PayloadTooLargeError,
   UnauthorizedError,
+  RateLimitError,
+  PayloadTooLargeError,
+  PolicyError,
+  NotImplementedError,
 };

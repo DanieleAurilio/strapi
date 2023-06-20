@@ -1,13 +1,16 @@
-import { useCallback, useReducer, useEffect, useRef } from 'react';
-import { useNotification } from '@strapi/helper-plugin';
-import reducer, { initialState } from './reducer';
-import axiosIntance from '../../utils/axiosInstance';
+import { useCallback, useEffect, useReducer, useRef } from 'react';
+
+import { useFetchClient, useNotification } from '@strapi/helper-plugin';
+
 import pluginId from '../../pluginId';
 
-const useFetchRole = id => {
+import reducer, { initialState } from './reducer';
+
+const useFetchRole = (id) => {
   const [state, dispatch] = useReducer(reducer, initialState);
   const toggleNotification = useNotification();
   const isMounted = useRef(null);
+  const { get } = useFetchClient();
 
   useEffect(() => {
     isMounted.current = true;
@@ -25,11 +28,11 @@ const useFetchRole = id => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  const fetchRole = async roleId => {
+  const fetchRole = async (roleId) => {
     try {
       const {
         data: { role },
-      } = await axiosIntance.get(`/${pluginId}/roles/${roleId}`);
+      } = await get(`/${pluginId}/roles/${roleId}`);
 
       // Prevent updating state on an unmounted component
       if (isMounted.current) {
@@ -51,7 +54,7 @@ const useFetchRole = id => {
     }
   };
 
-  const handleSubmitSucceeded = useCallback(data => {
+  const handleSubmitSucceeded = useCallback((data) => {
     dispatch({
       type: 'ON_SUBMIT_SUCCEEDED',
       ...data,

@@ -19,13 +19,17 @@ const {
   stringEquals,
   isKebabCase,
   isCamelCase,
+  toRegressedEnumValue,
+  startsWithANumber,
+  joinBy,
+  toKebabCase,
 } = require('./string-formatting');
-const { removeUndefined } = require('./object-formatting');
+const { removeUndefined, keysDeep } = require('./object-formatting');
 const { getConfigUrls, getAbsoluteAdminUrl, getAbsoluteServerUrl } = require('./config');
 const { generateTimestampCode } = require('./code-generator');
 const contentTypes = require('./content-types');
-const webhook = require('./webhook');
 const env = require('./env-helper');
+const webhook = require('./webhook');
 const relations = require('./relations');
 const setCreatorFields = require('./set-creator-fields');
 const hooks = require('./hooks');
@@ -33,7 +37,13 @@ const providerFactory = require('./provider-factory');
 const pagination = require('./pagination');
 const sanitize = require('./sanitize');
 const traverseEntity = require('./traverse-entity');
-const pipeAsync = require('./pipe-async');
+const { pipeAsync, mapAsync, reduceAsync, forEachAsync } = require('./async');
+const convertQueryParams = require('./convert-query-params');
+const importDefault = require('./import-default');
+const template = require('./template');
+const file = require('./file');
+const traverse = require('./traverse');
+const { isOperator, isOperatorOfType } = require('./operators');
 
 module.exports = {
   yup,
@@ -47,20 +57,26 @@ module.exports = {
   traverseEntity,
   parseType,
   nameToSlug,
+  toRegressedEnumValue,
+  startsWithANumber,
+  joinBy,
   nameToCollectionName,
   getCommonBeginning,
   getConfigUrls,
   escapeQuery,
   removeUndefined,
+  keysDeep,
   getAbsoluteAdminUrl,
   getAbsoluteServerUrl,
   generateTimestampCode,
   stringIncludes,
   stringEquals,
+  template,
   isKebabCase,
   isCamelCase,
-  contentTypes,
+  toKebabCase,
   webhook,
+  contentTypes,
   env,
   relations,
   setCreatorFields,
@@ -68,7 +84,16 @@ module.exports = {
   providerFactory,
   pagination,
   pipeAsync,
+  mapAsync,
+  reduceAsync,
+  forEachAsync,
   errors,
   validateYupSchema,
   validateYupSchemaSync,
+  convertQueryParams,
+  importDefault,
+  file,
+  traverse,
+  isOperator,
+  isOperatorOfType,
 };

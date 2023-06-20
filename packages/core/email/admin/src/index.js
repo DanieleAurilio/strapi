@@ -6,9 +6,11 @@
 // IF THE DOC IS NOT UPDATED THE PULL REQUEST WILL NOT BE MERGED
 
 import { prefixPluginTranslations } from '@strapi/helper-plugin';
+
 import pluginPkg from '../../package.json';
+
+import { PERMISSIONS } from './constants';
 import pluginId from './pluginId';
-import pluginPermissions from './permissions';
 import getTrad from './utils/getTrad';
 
 const name = pluginPkg.strapi.name;
@@ -24,19 +26,19 @@ export default {
       [
         {
           intlLabel: {
-            id: getTrad('SettingsNav.link.settings'),
+            id: getTrad('Settings.email.plugin.title'),
             defaultMessage: 'Settings',
           },
           id: 'settings',
           to: `/settings/${pluginId}`,
-          Component: async () => {
+          async Component() {
             const component = await import(
               /* webpackChunkName: "email-settings-page" */ './pages/Settings'
             );
 
             return component;
           },
-          permissions: pluginPermissions.settings,
+          permissions: PERMISSIONS.settings,
         },
       ]
     );
@@ -48,7 +50,7 @@ export default {
   bootstrap() {},
   async registerTrads({ locales }) {
     const importedTrads = await Promise.all(
-      locales.map(locale => {
+      locales.map((locale) => {
         return import(
           /* webpackChunkName: "email-translation-[request]" */ `./translations/${locale}.json`
         )

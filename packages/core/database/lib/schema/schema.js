@@ -17,7 +17,7 @@ const createColumn = (name, attribute) => {
   };
 };
 
-const createTable = meta => {
+const createTable = (meta) => {
   const table = {
     name: meta.tableName,
     indexes: meta.indexes || [],
@@ -25,7 +25,7 @@ const createTable = meta => {
     columns: [],
   };
 
-  for (const key in meta.attributes) {
+  for (const key of Object.keys(meta.attributes)) {
     const attribute = meta.attributes[key];
 
     if (types.isRelation(attribute.type)) {
@@ -96,7 +96,7 @@ const createTable = meta => {
   return table;
 };
 
-const getColumnType = attribute => {
+const getColumnType = (attribute) => {
   if (attribute.columnType) {
     return attribute.columnType;
   }
@@ -105,7 +105,7 @@ const getColumnType = attribute => {
     case 'increments': {
       return {
         type: 'increments',
-        args: [{ primary: true }],
+        args: [{ primary: true, primaryKey: true }],
         notNullable: true,
       };
     }
@@ -113,7 +113,8 @@ const getColumnType = attribute => {
     // We might want to convert email/password to string types before going into the orm with specific validators & transformers
     case 'password':
     case 'email':
-    case 'string': {
+    case 'string':
+    case 'enumeration': {
       return { type: 'string' };
     }
     case 'uid': {
@@ -131,15 +132,6 @@ const getColumnType = attribute => {
     }
     case 'json': {
       return { type: 'jsonb' };
-    }
-    case 'enumeration': {
-      return {
-        type: 'enum',
-        args: [
-          attribute.enum,
-          /*,{ useNative: true, existingType: true, enumName: 'foo_type', schemaName: 'public' }*/
-        ],
-      };
     }
     case 'integer': {
       return { type: 'integer' };
@@ -185,12 +177,12 @@ const getColumnType = attribute => {
       return { type: 'boolean' };
     }
     default: {
-      throw new Error(`Unknow type ${attribute.type}`);
+      throw new Error(`Unknown type ${attribute.type}`);
     }
   }
 };
 
-const metadataToSchema = metadata => {
+const metadataToSchema = (metadata) => {
   const schema = {
     tables: [],
     addTable(table) {
@@ -199,7 +191,7 @@ const metadataToSchema = metadata => {
     },
   };
 
-  metadata.forEach(metadata => {
+  metadata.forEach((metadata) => {
     schema.addTable(createTable(metadata));
   });
 

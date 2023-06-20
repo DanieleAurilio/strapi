@@ -1,64 +1,79 @@
 import React, { useState } from 'react';
-import PropTypes from 'prop-types';
-import { useIntl } from 'react-intl';
-import {
-  ModalLayout,
-  ModalHeader,
-  ModalFooter,
-  ModalBody,
-} from '@strapi/design-system/ModalLayout';
-import { Grid, GridItem } from '@strapi/design-system/Grid';
-import { Breadcrumbs, Crumb } from '@strapi/design-system/Breadcrumbs';
-import { Box } from '@strapi/design-system/Box';
-import { Button } from '@strapi/design-system/Button';
-import { Stack } from '@strapi/design-system/Stack';
-import { Typography } from '@strapi/design-system/Typography';
 
-import { Formik } from 'formik';
-import { Form, GenericInput, useNotification, useOverlayBlocker } from '@strapi/helper-plugin';
-import { useQueryClient, useMutation } from 'react-query';
+import {
+  Box,
+  Button,
+  Flex,
+  Grid,
+  GridItem,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
+  ModalLayout,
+  Typography,
+} from '@strapi/design-system';
+import { Breadcrumbs, Crumb } from '@strapi/design-system/v2';
+import {
+  Form,
+  GenericInput,
+  useFetchClient,
+  useNotification,
+  useOverlayBlocker,
+} from '@strapi/helper-plugin';
+import MagicLink from 'ee_else_ce/pages/SettingsPage/pages/Users/components/MagicLink';
 import formDataModel from 'ee_else_ce/pages/SettingsPage/pages/Users/ListPage/ModalForm/utils/formDataModel';
 import roleSettingsForm from 'ee_else_ce/pages/SettingsPage/pages/Users/ListPage/ModalForm/utils/roleSettingsForm';
-import MagicLink from 'ee_else_ce/pages/SettingsPage/pages/Users/components/MagicLink';
-import { axiosInstance } from '../../../../../../core/utils';
+import { Formik } from 'formik';
+import PropTypes from 'prop-types';
+import { useIntl } from 'react-intl';
+import { useMutation } from 'react-query';
+
 import SelectRoles from '../../components/SelectRoles';
+
 import layout from './utils/layout';
 import schema from './utils/schema';
 import stepper from './utils/stepper';
 
-const ModalForm = ({ queryName, onToggle }) => {
+const ModalForm = ({ onSuccess, onToggle }) => {
   const [currentStep, setStep] = useState('create');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [registrationToken, setRegistrationToken] = useState(null);
-  const queryClient = useQueryClient();
   const { formatMessage } = useIntl();
   const toggleNotification = useNotification();
   const { lockApp, unlockApp } = useOverlayBlocker();
-  const postMutation = useMutation(body => axiosInstance.post('/admin/users', body), {
-    onSuccess: async ({ data }) => {
-      setRegistrationToken(data.data.registrationToken);
-      await queryClient.invalidateQueries(queryName);
-      goNext();
-      setIsSubmitting(false);
+  const { post } = useFetchClient();
+  const postMutation = useMutation(
+    (body) => {
+      return post('/admin/users', body);
     },
-    onError: err => {
-      setIsSubmitting(false);
+    {
+      async onSuccess({ data }) {
+        setRegistrationToken(data.data.registrationToken);
 
-      toggleNotification({
-        type: 'warning',
-        message: { id: 'notification.error', defaultMessage: 'An error occured' },
-      });
+        await onSuccess();
 
-      throw err;
-    },
-    onSettled: () => {
-      unlockApp();
-    },
-  });
+        goNext();
+        setIsSubmitting(false);
+      },
+      onError(err) {
+        setIsSubmitting(false);
+
+        toggleNotification({
+          type: 'warning',
+          message: { id: 'notification.error', defaultMessage: 'An error occured' },
+        });
+
+        throw err;
+      },
+      onSettled() {
+        unlockApp();
+      },
+    }
+  );
 
   const headerTitle = formatMessage({
     id: 'Settings.permissions.users.create',
-    defaultMessage: 'Create new user',
+    defaultMessage: 'Invite new user',
   });
 
   const handleSubmit = async (body, { setErrors }) => {
@@ -69,8 +84,8 @@ const ModalForm = ({ queryName, onToggle }) => {
     } catch (err) {
       unlockApp();
 
-      if (err?.response?.data.message === 'Email already taken') {
-        setErrors({ email: err.response.data.message });
+      if (err?.response?.data?.error.message === 'Email already taken') {
+        setErrors({ email: err.response.data.error.message });
       }
     }
   };
@@ -98,8 +113,11 @@ const ModalForm = ({ queryName, onToggle }) => {
   return (
     <ModalLayout onClose={onToggle} labelledBy="title">
       <ModalHeader>
+        {/**
+         * TODO: this is not semantically correct and should be amended.
+         */}
         <Breadcrumbs label={headerTitle}>
-          <Crumb>{headerTitle}</Crumb>
+          <Crumb isCurrent>{headerTitle}</Crumb>
         </Breadcrumbs>
       </ModalHeader>
       <Formik
@@ -112,20 +130,20 @@ const ModalForm = ({ queryName, onToggle }) => {
           return (
             <Form>
               <ModalBody>
-                <Stack size={6}>
+                <Flex direction="column" alignItems="stretch" gap={6}>
                   {currentStep !== 'create' && <MagicLink registrationToken={registrationToken} />}
                   <Box>
                     <Typography variant="beta" as="h2">
                       {formatMessage({
                         id: 'app.components.Users.ModalCreateBody.block-title.details',
-                        defaultMessage: 'Details',
+                        defaultMessage: 'User details',
                       })}
                     </Typography>
                     <Box paddingTop={4}>
-                      <Stack size={1}>
+                      <Flex direction="column" alignItems="stretch" gap={1}>
                         <Grid gap={5}>
-                          {layout.map(row => {
-                            return row.map(input => {
+                          {layout.map((row) => {
+                            return row.map((input) => {
                               return (
                                 <GridItem key={input.name} {...input.size}>
                                   <GenericInput
@@ -140,14 +158,14 @@ const ModalForm = ({ queryName, onToggle }) => {
                             });
                           })}
                         </Grid>
-                      </Stack>
+                      </Flex>
                     </Box>
                   </Box>
                   <Box>
                     <Typography variant="beta" as="h2">
                       {formatMessage({
-                        id: 'app.components.Users.ModalCreateBody.block-title.login',
-                        defaultMessage: 'Login settings',
+                        id: 'global.roles',
+                        defaultMessage: "User's role",
                       })}
                     </Typography>
                     <Box paddingTop={4}>
@@ -160,8 +178,8 @@ const ModalForm = ({ queryName, onToggle }) => {
                             value={values.roles}
                           />
                         </GridItem>
-                        {roleSettingsForm.map(row => {
-                          return row.map(input => {
+                        {roleSettingsForm.map((row) => {
+                          return row.map((input) => {
                             return (
                               <GridItem key={input.name} {...input.size}>
                                 <GenericInput
@@ -177,7 +195,7 @@ const ModalForm = ({ queryName, onToggle }) => {
                       </Grid>
                     </Box>
                   </Box>
-                </Stack>
+                </Flex>
               </ModalBody>
               <ModalFooter
                 startActions={
@@ -200,7 +218,7 @@ const ModalForm = ({ queryName, onToggle }) => {
 
 ModalForm.propTypes = {
   onToggle: PropTypes.func.isRequired,
-  queryName: PropTypes.array.isRequired,
+  onSuccess: PropTypes.func.isRequired,
 };
 
 export default ModalForm;

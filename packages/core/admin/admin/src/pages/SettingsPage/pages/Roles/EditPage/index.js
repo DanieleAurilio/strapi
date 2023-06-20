@@ -1,25 +1,24 @@
 import React, { useRef, useState } from 'react';
+
+import { Box, Button, ContentLayout, Flex, HeaderLayout, Main } from '@strapi/design-system';
 import {
-  request,
+  Link,
+  LoadingIndicatorPage,
+  SettingsPageTitle,
+  useFetchClient,
   useNotification,
   useOverlayBlocker,
   useTracking,
-  LoadingIndicatorPage,
-  SettingsPageTitle,
 } from '@strapi/helper-plugin';
-import { Box } from '@strapi/design-system/Box';
-import { Button } from '@strapi/design-system/Button';
-import { ContentLayout, HeaderLayout } from '@strapi/design-system/Layout';
-import { Main } from '@strapi/design-system/Main';
-import { Stack } from '@strapi/design-system/Stack';
+import { ArrowLeft } from '@strapi/icons';
 import { Formik } from 'formik';
-import { Link } from '@strapi/design-system/Link';
-import ArrowLeft from '@strapi/icons/ArrowLeft';
 import get from 'lodash/get';
 import { useIntl } from 'react-intl';
 import { useRouteMatch } from 'react-router-dom';
-import { Permissions, RoleForm } from './components';
+
 import { useFetchPermissionsLayout, useFetchRole } from '../../../../../hooks';
+
+import { Permissions, RoleForm } from './components';
 import schema from './utils/schema';
 
 const EditPage = () => {
@@ -41,24 +40,20 @@ const EditPage = () => {
     onSubmitSucceeded,
   } = useFetchRole(id);
 
-  const handleEditRoleSubmit = async data => {
+  const { put } = useFetchClient();
+
+  const handleEditRoleSubmit = async (data) => {
     try {
       lockApp();
       setIsSubmiting(true);
 
       const { permissionsToSend, didUpdateConditions } = permissionsRef.current.getPermissions();
 
-      await request(`/admin/roles/${id}`, {
-        method: 'PUT',
-        body: data,
-      });
+      await put(`/admin/roles/${id}`, data);
 
       if (role.code !== 'strapi-super-admin') {
-        await request(`/admin/roles/${id}/permissions`, {
-          method: 'PUT',
-          body: {
-            permissions: permissionsToSend,
-          },
+        await put(`/admin/roles/${id}/permissions`, {
+          permissions: permissionsToSend,
         });
 
         if (didUpdateConditions) {
@@ -106,68 +101,66 @@ const EditPage = () => {
       >
         {({ handleSubmit, values, errors, handleChange, handleBlur }) => (
           <form onSubmit={handleSubmit}>
-            <>
-              <HeaderLayout
-                primaryAction={
-                  <Stack horizontal size={2}>
-                    <Button
-                      disabled={role.code === 'strapi-super-admin'}
-                      onClick={handleSubmit}
-                      loading={isSubmitting}
-                      size="L"
-                    >
-                      {formatMessage({
-                        id: 'app.components.Button.save',
-                        defaultMessage: 'Save',
-                      })}
-                    </Button>
-                  </Stack>
-                }
-                title={formatMessage({
-                  id: 'Settings.roles.edit.title',
-                  defaultMessage: 'Edit a role',
-                })}
-                subtitle={formatMessage({
-                  id: 'Settings.roles.create.description',
-                  defaultMessage: 'Define the rights given to the role',
-                })}
-                navigationAction={
-                  <Link startIcon={<ArrowLeft />} to="/settings/roles">
+            <HeaderLayout
+              primaryAction={
+                <Flex gap={2}>
+                  <Button
+                    disabled={role.code === 'strapi-super-admin'}
+                    onClick={handleSubmit}
+                    loading={isSubmitting}
+                    size="L"
+                  >
                     {formatMessage({
-                      id: 'app.components.go-back',
-                      defaultMessage: 'Go back',
+                      id: 'global.save',
+                      defaultMessage: 'Save',
                     })}
-                  </Link>
-                }
-              />
-              <ContentLayout>
-                <Stack size={6}>
-                  <RoleForm
-                    isLoading={isRoleLoading}
-                    disabled={isFormDisabled}
-                    errors={errors}
-                    values={values}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    role={role}
-                  />
-                  {!isLayoutLoading && !isRoleLoading ? (
-                    <Box shadow="filterShadow" hasRadius>
-                      <Permissions
-                        isFormDisabled={isFormDisabled}
-                        permissions={rolePermissions}
-                        ref={permissionsRef}
-                        layout={permissionsLayout}
-                      />
-                    </Box>
-                  ) : (
-                    <Box background="neutral0" padding={6} shadow="filterShadow" hasRadius>
-                      <LoadingIndicatorPage />
-                    </Box>
-                  )}
-                </Stack>
-              </ContentLayout>
-            </>
+                  </Button>
+                </Flex>
+              }
+              title={formatMessage({
+                id: 'Settings.roles.edit.title',
+                defaultMessage: 'Edit a role',
+              })}
+              subtitle={formatMessage({
+                id: 'Settings.roles.create.description',
+                defaultMessage: 'Define the rights given to the role',
+              })}
+              navigationAction={
+                <Link startIcon={<ArrowLeft />} to="/settings/roles">
+                  {formatMessage({
+                    id: 'global.back',
+                    defaultMessage: 'Back',
+                  })}
+                </Link>
+              }
+            />
+            <ContentLayout>
+              <Flex direction="column" alignItems="stretch" gap={6}>
+                <RoleForm
+                  isLoading={isRoleLoading}
+                  disabled={isFormDisabled}
+                  errors={errors}
+                  values={values}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  role={role}
+                />
+                {!isLayoutLoading && !isRoleLoading ? (
+                  <Box shadow="filterShadow" hasRadius>
+                    <Permissions
+                      isFormDisabled={isFormDisabled}
+                      permissions={rolePermissions}
+                      ref={permissionsRef}
+                      layout={permissionsLayout}
+                    />
+                  </Box>
+                ) : (
+                  <Box background="neutral0" padding={6} shadow="filterShadow" hasRadius>
+                    <LoadingIndicatorPage />
+                  </Box>
+                )}
+              </Flex>
+            </ContentLayout>
           </form>
         )}
       </Formik>

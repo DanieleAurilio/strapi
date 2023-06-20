@@ -1,4 +1,6 @@
+import set from 'lodash/set';
 import { stringify } from 'qs';
+
 import createPluginsFilter from './createPluginsFilter';
 
 /**
@@ -12,12 +14,23 @@ const buildQueryString = (queryParams = {}) => {
    * Extracting pluginOptions from the query since we don't want them to be part
    * of the url
    */
-  const { plugins: _, ...otherQueryParams } = {
+  const {
+    plugins: _,
+    _q: query,
+    ...otherQueryParams
+  } = {
     ...queryParams,
     ...createPluginsFilter(queryParams.plugins),
   };
 
-  return `?${stringify(otherQueryParams, { encode: false })}`;
+  if (query) {
+    set(otherQueryParams, `_q`, encodeURIComponent(query));
+  }
+
+  return `${stringify(otherQueryParams, {
+    encode: false,
+    addQueryPrefix: true,
+  })}`;
 };
 
 export default buildQueryString;

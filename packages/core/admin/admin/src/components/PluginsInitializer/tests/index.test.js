@@ -1,9 +1,13 @@
 import React from 'react';
+
 import { StrapiAppProvider } from '@strapi/helper-plugin';
 import { render } from '@testing-library/react';
+
 import PluginsInitializer from '../index';
 
-jest.mock('../../../pages/Admin', () => () => <div>ADMIN</div>);
+jest.mock('../../../pages/Admin', () => () => {
+  return <div>ADMIN</div>;
+});
 
 describe('ADMIN | COMPONENTS | PluginsInitializer', () => {
   it('should not crash', () => {

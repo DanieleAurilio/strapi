@@ -1,34 +1,35 @@
 import React, { useState } from 'react';
-import { useIntl } from 'react-intl';
-import { Formik } from 'formik';
+
+// Strapi Parts
+import {
+  Box,
+  Button,
+  ContentLayout,
+  Flex,
+  Grid,
+  GridItem,
+  HeaderLayout,
+  Main,
+  TextInput,
+  ToggleInput,
+  Typography,
+} from '@strapi/design-system';
 import {
   CheckPermissions,
   Form,
   LoadingIndicatorPage,
   useFocusWhenNavigate,
 } from '@strapi/helper-plugin';
-
-// Strapi Parts
-import { ContentLayout, HeaderLayout } from '@strapi/design-system/Layout';
-import { Main } from '@strapi/design-system/Main';
-import { Button } from '@strapi/design-system/Button';
-import { Box } from '@strapi/design-system/Box';
-import { Stack } from '@strapi/design-system/Stack';
-import { Typography } from '@strapi/design-system/Typography';
-import { ToggleInput } from '@strapi/design-system/ToggleInput';
-import { TextInput } from '@strapi/design-system/TextInput';
-import { Grid, GridItem } from '@strapi/design-system/Grid';
-
 // Strapi Icons
-import Show from '@strapi/icons/Eye';
-import Hide from '@strapi/icons/EyeStriked';
-import Check from '@strapi/icons/Check';
+import { Check, Eye as Show, EyeStriked as Hide } from '@strapi/icons';
+import { Formik } from 'formik';
+import { useIntl } from 'react-intl';
 
-import permissions from '../../permissions';
-import { getTrad } from '../../utils';
-import useReactQuery from '../utils/useReactQuery';
 import FieldActionWrapper from '../../components/FieldActionWrapper';
+import { PERMISSIONS } from '../../constants';
+import { getTrad } from '../../utils';
 import schema from '../utils/schema';
+import useReactQuery from '../utils/useReactQuery';
 
 const SettingsPage = () => {
   useFocusWhenNavigate();
@@ -36,7 +37,7 @@ const SettingsPage = () => {
   const { submitMutation, data, isLoading } = useReactQuery();
   const [passwordShown, setPasswordShown] = useState(false);
 
-  const handleUpdateSettingsSubmit = body => {
+  const handleUpdateSettingsSubmit = (body) => {
     submitMutation.mutate({
       prefix: data?.prefix,
       body,
@@ -69,7 +70,7 @@ const SettingsPage = () => {
                     defaultMessage: 'Configure the documentation plugin',
                   })}
                   primaryAction={
-                    <CheckPermissions permissions={permissions.update}>
+                    <CheckPermissions permissions={PERMISSIONS.update}>
                       <Button type="submit" startIcon={<Check />}>
                         {formatMessage({
                           id: getTrad('pages.SettingsPage.Button.save'),
@@ -89,10 +90,10 @@ const SettingsPage = () => {
                     paddingLeft={7}
                     paddingRight={7}
                   >
-                    <Stack size={4}>
+                    <Flex direction="column" alignItems="stretch" gap={4}>
                       <Typography variant="delta" as="h2">
                         {formatMessage({
-                          id: getTrad('pages.SettingsPage.title'),
+                          id: 'global.settings',
                           defaultMessage: 'Settings',
                         })}
                       </Typography>
@@ -125,7 +126,7 @@ const SettingsPage = () => {
                           <GridItem col={6} s={12}>
                             <TextInput
                               label={formatMessage({
-                                id: getTrad('pages.SettingsPage.password.label'),
+                                id: 'global.password',
                                 defaultMessage: 'Password',
                               })}
                               name="password"
@@ -143,9 +144,9 @@ const SettingsPage = () => {
                               }
                               endAction={
                                 <FieldActionWrapper
-                                  onClick={e => {
+                                  onClick={(e) => {
                                     e.stopPropagation();
-                                    setPasswordShown(prev => !prev);
+                                    setPasswordShown((prev) => !prev);
                                   }}
                                   label={formatMessage(
                                     passwordShown
@@ -166,7 +167,7 @@ const SettingsPage = () => {
                           </GridItem>
                         )}
                       </Grid>
-                    </Stack>
+                    </Flex>
                   </Box>
                 </ContentLayout>
               </Form>

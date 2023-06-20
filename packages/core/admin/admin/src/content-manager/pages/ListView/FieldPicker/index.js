@@ -1,12 +1,15 @@
 import React, { memo } from 'react';
-import PropTypes from 'prop-types';
-import { useDispatch, useSelector } from 'react-redux';
-import { useIntl } from 'react-intl';
-import { Select, Option } from '@strapi/design-system/Select';
-import { Box } from '@strapi/design-system/Box';
+
+import { Box, Option, Select } from '@strapi/design-system';
 import { useTracking } from '@strapi/helper-plugin';
+import PropTypes from 'prop-types';
+import { useIntl } from 'react-intl';
+import { useDispatch, useSelector } from 'react-redux';
+
+import getTrad from '../../../utils/getTrad';
 import { onChangeListHeaders } from '../actions';
 import { selectDisplayedHeaders } from '../selectors';
+
 import getAllAllowedHeaders from './utils/getAllAllowedHeader';
 
 const FieldPicker = ({ layout }) => {
@@ -15,7 +18,7 @@ const FieldPicker = ({ layout }) => {
   const { trackUsage } = useTracking();
   const { formatMessage } = useIntl();
 
-  const allAllowedHeaders = getAllAllowedHeaders(layout.contentType.attributes).map(attrName => {
+  const allAllowedHeaders = getAllAllowedHeaders(layout.contentType.attributes).map((attrName) => {
     const metadatas = layout.contentType.metadatas[attrName].list;
 
     return {
@@ -25,18 +28,18 @@ const FieldPicker = ({ layout }) => {
   });
   const values = displayedHeaders.map(({ name }) => name);
 
-  const handleChange = updatedValues => {
+  const handleChange = (updatedValues) => {
     trackUsage('didChangeDisplayedFields');
 
     // removing a header
     if (updatedValues.length < values.length) {
-      const removedHeader = values.filter(value => {
+      const removedHeader = values.filter((value) => {
         return updatedValues.indexOf(value) === -1;
       });
 
       dispatch(onChangeListHeaders({ name: removedHeader[0], value: true }));
     } else {
-      const addedHeader = updatedValues.filter(value => {
+      const addedHeader = updatedValues.filter((value) => {
         return values.indexOf(value) === -1;
       });
 
@@ -50,11 +53,19 @@ const FieldPicker = ({ layout }) => {
         aria-label="change displayed fields"
         value={values}
         onChange={handleChange}
-        customizeContent={values => `${values.length} currently selected`}
+        customizeContent={(values) =>
+          formatMessage(
+            {
+              id: getTrad('select.currently.selected'),
+              defaultMessage: '{count} currently selected',
+            },
+            { count: values.length }
+          )
+        }
         multi
         size="S"
       >
-        {allAllowedHeaders.map(header => {
+        {allAllowedHeaders.map((header) => {
           return (
             <Option key={header.name} value={header.name}>
               {formatMessage({
@@ -76,7 +87,6 @@ FieldPicker.propTypes = {
       metadatas: PropTypes.object.isRequired,
       layouts: PropTypes.shape({
         list: PropTypes.array.isRequired,
-        editRelations: PropTypes.array,
       }).isRequired,
       options: PropTypes.object.isRequired,
       settings: PropTypes.object.isRequired,

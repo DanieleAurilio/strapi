@@ -1,39 +1,45 @@
 import React from 'react';
-import { useRouteMatch, useHistory } from 'react-router-dom';
-import { useIntl } from 'react-intl';
-import PropTypes from 'prop-types';
-import pick from 'lodash/pick';
-import get from 'lodash/get';
-import omit from 'lodash/omit';
+
 import {
+  Box,
+  Button,
+  ContentLayout,
+  Flex,
+  Grid,
+  GridItem,
+  HeaderLayout,
+  Main,
+  Typography,
+} from '@strapi/design-system';
+import {
+  auth,
   Form,
   GenericInput,
+  Link,
+  LoadingIndicatorPage,
   SettingsPageTitle,
-  auth,
-  useAppInfos,
+  useAppInfo,
   useFocusWhenNavigate,
   useNotification,
   useOverlayBlocker,
-  LoadingIndicatorPage,
 } from '@strapi/helper-plugin';
-import { useQuery } from 'react-query';
-import { Formik } from 'formik';
-import { Box } from '@strapi/design-system/Box';
-import { Button } from '@strapi/design-system/Button';
-import { Grid, GridItem } from '@strapi/design-system/Grid';
-import { HeaderLayout, ContentLayout } from '@strapi/design-system/Layout';
-import { Link } from '@strapi/design-system/Link';
-import { Typography } from '@strapi/design-system/Typography';
-import { Main } from '@strapi/design-system/Main';
-import { Stack } from '@strapi/design-system/Stack';
-import ArrowLeft from '@strapi/icons/ArrowLeft';
-import Check from '@strapi/icons/Check';
+import { ArrowLeft, Check } from '@strapi/icons';
 import MagicLink from 'ee_else_ce/pages/SettingsPage/pages/Users/components/MagicLink';
+import { Formik } from 'formik';
+import get from 'lodash/get';
+import omit from 'lodash/omit';
+import pick from 'lodash/pick';
+import PropTypes from 'prop-types';
+import { useIntl } from 'react-intl';
+import { useHistory, useRouteMatch } from 'react-router-dom';
+
+import { useAdminUsers } from '../../../../../hooks/useAdminUsers';
 import { formatAPIErrors, getFullName } from '../../../../../utils';
-import { fetchUser, putUser } from './utils/api';
-import layout from './utils/layout';
-import { editValidation } from '../utils/validations/users';
 import SelectRoles from '../components/SelectRoles';
+import { editValidation } from '../utils/validations/users';
+
+import { putUser } from './utils/api';
+import layout from './utils/layout';
 
 const fieldsToPick = ['email', 'firstname', 'lastname', 'username', 'isActive', 'roles'];
 
@@ -43,34 +49,40 @@ const EditPage = ({ canUpdate }) => {
     params: { id },
   } = useRouteMatch('/settings/users/:id');
   const { push } = useHistory();
-  const { setUserDisplayName } = useAppInfos();
-
+  const { setUserDisplayName } = useAppInfo();
   const toggleNotification = useNotification();
   const { lockApp, unlockApp } = useOverlayBlocker();
   useFocusWhenNavigate();
 
-  const { status, data } = useQuery(['user', id], () => fetchUser(id), {
-    retry: false,
-    keepPreviousData: false,
-    staleTime: 1000 * 20,
-    onError: err => {
-      const status = err.response.status;
+  const {
+    users: [user],
+    isLoading,
+  } = useAdminUsers(
+    { id },
+    {
+      onError(error) {
+        const { status } = error.response;
 
-      // Redirect the use to the homepage if is not allowed to read
-      if (status === 403) {
-        toggleNotification({
-          type: 'info',
-          message: {
-            id: 'notification.permission.not-allowed-read',
-            defaultMessage: 'You are not allowed to see this document',
-          },
-        });
+        // Redirect the use to the homepage if is not allowed to read
+        if (status === 403) {
+          toggleNotification({
+            type: 'info',
+            message: {
+              id: 'notification.permission.not-allowed-read',
+              defaultMessage: 'You are not allowed to see this document',
+            },
+          });
 
-        push('/');
-      }
-      console.log(err.response.status);
-    },
-  });
+          push('/');
+        } else {
+          toggleNotification({
+            type: 'warning',
+            message: { id: 'notification.error', defaultMessage: 'An error occured' },
+          });
+        }
+      },
+    }
+  );
 
   const handleSubmit = async (body, actions) => {
     lockApp();
@@ -106,26 +118,25 @@ const EditPage = ({ canUpdate }) => {
       actions.setErrors(fieldsErrors);
       toggleNotification({
         type: 'warning',
-        message: get(err, 'response.data.message', 'notification.error'),
+        message: get(err, 'response.data.error.message', 'notification.error'),
       });
     }
 
     unlockApp();
   };
 
-  const isLoading = status !== 'success';
   const headerLabel = isLoading
     ? { id: 'app.containers.Users.EditPage.header.label-loading', defaultMessage: 'Edit user' }
     : { id: 'app.containers.Users.EditPage.header.label', defaultMessage: 'Edit {name}' };
 
-  const initialData = Object.keys(pick(data, fieldsToPick)).reduce((acc, current) => {
+  const initialData = Object.keys(pick(user, fieldsToPick)).reduce((acc, current) => {
     if (current === 'roles') {
-      acc[current] = (data?.roles || []).map(({ id }) => id);
+      acc[current] = (user?.roles || []).map(({ id }) => id);
 
       return acc;
     }
 
-    acc[current] = data?.[current];
+    acc[current] = user?.[current];
 
     return acc;
   }, {});
@@ -138,19 +149,20 @@ const EditPage = ({ canUpdate }) => {
   if (isLoading) {
     return (
       <Main aria-busy="true">
+        {/* TODO: translate */}
         <SettingsPageTitle name="Users" />
         <HeaderLayout
           primaryAction={
             <Button disabled startIcon={<Check />} type="button" size="L">
-              {formatMessage({ id: 'form.button.save', defaultMessage: 'Save' })}
+              {formatMessage({ id: 'global.save', defaultMessage: 'Save' })}
             </Button>
           }
           title={title}
           navigationAction={
             <Link startIcon={<ArrowLeft />} to="/settings/users?pageSize=10&page=1&sort=firstname">
               {formatMessage({
-                id: 'app.components.go-back',
-                defaultMessage: 'Go back',
+                id: 'global.back',
+                defaultMessage: 'Back',
               })}
             </Link>
           }
@@ -183,7 +195,7 @@ const EditPage = ({ canUpdate }) => {
                     type="submit"
                     size="L"
                   >
-                    {formatMessage({ id: 'form.button.save', defaultMessage: 'Save' })}
+                    {formatMessage({ id: 'global.save', defaultMessage: 'Save' })}
                   </Button>
                 }
                 title={title}
@@ -193,19 +205,19 @@ const EditPage = ({ canUpdate }) => {
                     to="/settings/users?pageSize=10&page=1&sort=firstname"
                   >
                     {formatMessage({
-                      id: 'app.components.go-back',
-                      defaultMessage: 'Go back',
+                      id: 'global.back',
+                      defaultMessage: 'Back',
                     })}
                   </Link>
                 }
               />
               <ContentLayout>
-                {data?.registrationToken && (
+                {user?.registrationToken && (
                   <Box paddingBottom={6}>
-                    <MagicLink registrationToken={data.registrationToken} />
+                    <MagicLink registrationToken={user.registrationToken} />
                   </Box>
                 )}
-                <Stack size={7}>
+                <Flex direction="column" alignItems="stretch" gap={7}>
                   <Box
                     background="neutral0"
                     hasRadius
@@ -215,7 +227,7 @@ const EditPage = ({ canUpdate }) => {
                     paddingLeft={7}
                     paddingRight={7}
                   >
-                    <Stack size={4}>
+                    <Flex direction="column" alignItems="stretch" gap={4}>
                       <Typography variant="delta" as="h2">
                         {formatMessage({
                           id: 'app.components.Users.ModalCreateBody.block-title.details',
@@ -223,8 +235,8 @@ const EditPage = ({ canUpdate }) => {
                         })}
                       </Typography>
                       <Grid gap={5}>
-                        {layout.map(row => {
-                          return row.map(input => {
+                        {layout.map((row) => {
+                          return row.map((input) => {
                             return (
                               <GridItem key={input.name} {...input.size}>
                                 <GenericInput
@@ -239,7 +251,7 @@ const EditPage = ({ canUpdate }) => {
                           });
                         })}
                       </Grid>
-                    </Stack>
+                    </Flex>
                   </Box>
                   <Box
                     background="neutral0"
@@ -250,11 +262,11 @@ const EditPage = ({ canUpdate }) => {
                     paddingLeft={7}
                     paddingRight={7}
                   >
-                    <Stack size={4}>
+                    <Flex direction="column" alignItems="stretch" gap={4}>
                       <Typography variant="delta" as="h2">
                         {formatMessage({
-                          id: 'app.components.Users.ModalCreateBody.block-title.login',
-                          defaultMessage: 'Login settings',
+                          id: 'global.roles',
+                          defaultMessage: "User's role",
                         })}
                       </Typography>
                       <Grid gap={5}>
@@ -267,9 +279,9 @@ const EditPage = ({ canUpdate }) => {
                           />
                         </GridItem>
                       </Grid>
-                    </Stack>
+                    </Flex>
                   </Box>
-                </Stack>
+                </Flex>
               </ContentLayout>
             </Form>
           );

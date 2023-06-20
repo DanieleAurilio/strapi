@@ -1,7 +1,19 @@
 import React, { useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from 'react-query';
-import { useIntl } from 'react-intl';
-import { Formik } from 'formik';
+
+import {
+  Box,
+  Button,
+  ContentLayout,
+  Flex,
+  Grid,
+  GridItem,
+  HeaderLayout,
+  Main,
+  Option,
+  Select,
+  Typography,
+  useNotifyAT,
+} from '@strapi/design-system';
 import {
   CheckPagePermissions,
   Form,
@@ -13,24 +25,20 @@ import {
   useOverlayBlocker,
   useRBAC,
 } from '@strapi/helper-plugin';
-import { useNotifyAT } from '@strapi/design-system/LiveRegions';
-import { Main } from '@strapi/design-system/Main';
-import { HeaderLayout, ContentLayout } from '@strapi/design-system/Layout';
-import { Button } from '@strapi/design-system/Button';
-import { Box } from '@strapi/design-system/Box';
-import { Stack } from '@strapi/design-system/Stack';
-import { Select, Option } from '@strapi/design-system/Select';
-import { Typography } from '@strapi/design-system/Typography';
-import { Grid, GridItem } from '@strapi/design-system/Grid';
-import Check from '@strapi/icons/Check';
-import pluginPermissions from '../../permissions';
+import { Check } from '@strapi/icons';
+import { Formik } from 'formik';
+import { useIntl } from 'react-intl';
+import { useMutation, useQuery, useQueryClient } from 'react-query';
+
+import { PERMISSIONS } from '../../constants';
 import { getTrad } from '../../utils';
+
+import { fetchData, putAdvancedSettings } from './utils/api';
 import layout from './utils/layout';
 import schema from './utils/schema';
-import { fetchData, putAdvancedSettings } from './utils/api';
 
 const ProtectedAdvancedSettingsPage = () => (
-  <CheckPagePermissions permissions={pluginPermissions.readAdvancedSettings}>
+  <CheckPagePermissions permissions={PERMISSIONS.readAdvancedSettings}>
     <AdvancedSettingsPage />
   </CheckPagePermissions>
 );
@@ -43,17 +51,14 @@ const AdvancedSettingsPage = () => {
   const queryClient = useQueryClient();
   useFocusWhenNavigate();
 
-  const updatePermissions = useMemo(
-    () => ({ update: pluginPermissions.updateAdvancedSettings }),
-    []
-  );
+  const updatePermissions = useMemo(() => ({ update: PERMISSIONS.updateAdvancedSettings }), []);
   const {
     isLoading: isLoadingForPermissions,
     allowedActions: { canUpdate },
   } = useRBAC(updatePermissions);
 
   const { status: isLoadingData, data } = useQuery('advanced', () => fetchData(), {
-    onSuccess: () => {
+    onSuccess() {
       notifyStatus(
         formatMessage({
           id: getTrad('Form.advancedSettings.data.loaded'),
@@ -61,7 +66,7 @@ const AdvancedSettingsPage = () => {
         })
       );
     },
-    onError: () => {
+    onError() {
       toggleNotification({
         type: 'warning',
         message: { id: getTrad('notification.error'), defaultMessage: 'An error occured' },
@@ -71,8 +76,8 @@ const AdvancedSettingsPage = () => {
 
   const isLoading = isLoadingForPermissions || isLoadingData !== 'success';
 
-  const submitMutation = useMutation(body => putAdvancedSettings(body), {
-    onSuccess: async () => {
+  const submitMutation = useMutation((body) => putAdvancedSettings(body), {
+    async onSuccess() {
       await queryClient.invalidateQueries('advanced');
       toggleNotification({
         type: 'success',
@@ -81,7 +86,7 @@ const AdvancedSettingsPage = () => {
 
       unlockApp();
     },
-    onError: () => {
+    onError() {
       toggleNotification({
         type: 'warning',
         message: { id: getTrad('notification.error'), defaultMessage: 'An error occured' },
@@ -93,7 +98,7 @@ const AdvancedSettingsPage = () => {
 
   const { isLoading: isSubmittingForm } = submitMutation;
 
-  const handleSubmit = async body => {
+  const handleSubmit = async (body) => {
     lockApp();
 
     const urlConfirmation = body.email_confirmation ? body.email_confirmation_redirection : '';
@@ -152,9 +157,9 @@ const AdvancedSettingsPage = () => {
                     type="submit"
                     disabled={!canUpdate}
                     startIcon={<Check />}
-                    size="L"
+                    size="S"
                   >
-                    {formatMessage({ id: getTrad('Form.save'), defaultMessage: 'Save' })}
+                    {formatMessage({ id: 'global.save', defaultMessage: 'Save' })}
                   </Button>
                 }
               />
@@ -168,10 +173,10 @@ const AdvancedSettingsPage = () => {
                   paddingLeft={7}
                   paddingRight={7}
                 >
-                  <Stack size={4}>
+                  <Flex direction="column" alignItems="stretch" gap={4}>
                     <Typography variant="delta" as="h2">
                       {formatMessage({
-                        id: getTrad('Form.title.advancedSettings'),
+                        id: 'global.settings',
                         defaultMessage: 'Settings',
                       })}
                     </Typography>
@@ -188,10 +193,11 @@ const AdvancedSettingsPage = () => {
                             defaultMessage:
                               'It will attach the new authenticated user to the selected role.',
                           })}
-                          onChange={e =>
-                            handleChange({ target: { name: 'default_role', value: e } })}
+                          onChange={(e) =>
+                            handleChange({ target: { name: 'default_role', value: e } })
+                          }
                         >
-                          {data.roles.map(role => {
+                          {data.roles.map((role) => {
                             return (
                               <Option key={role.type} value={role.type}>
                                 {role.name}
@@ -200,7 +206,7 @@ const AdvancedSettingsPage = () => {
                           })}
                         </Select>
                       </GridItem>
-                      {layout.map(input => {
+                      {layout.map((input) => {
                         let value = values[input.name];
 
                         if (!value) {
@@ -223,7 +229,7 @@ const AdvancedSettingsPage = () => {
                         );
                       })}
                     </Grid>
-                  </Stack>
+                  </Flex>
                 </Box>
               </ContentLayout>
             </Form>

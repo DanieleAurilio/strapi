@@ -1,33 +1,38 @@
-import React, { useState, useEffect } from 'react';
-import { useIntl } from 'react-intl';
-import { get } from 'lodash';
+import React, { useEffect, useState } from 'react';
+
 import {
-  getYupInnerErrors,
+  Box,
+  Button,
+  ContentLayout,
+  Flex,
+  Grid,
+  GridItem,
+  Main,
+  TextInput,
+  Typography,
+  useNotifyAT,
+} from '@strapi/design-system';
+import {
   CheckPagePermissions,
-  useNotification,
+  getYupInnerErrors,
   LoadingIndicatorPage,
-  useOverlayBlocker,
   useFocusWhenNavigate,
+  useNotification,
+  useOverlayBlocker,
 } from '@strapi/helper-plugin';
-import { Main } from '@strapi/design-system/Main';
-import { ContentLayout } from '@strapi/design-system/Layout';
-import { Stack } from '@strapi/design-system/Stack';
-import { Box } from '@strapi/design-system/Box';
-import { Grid, GridItem } from '@strapi/design-system/Grid';
-import { Typography } from '@strapi/design-system/Typography';
-import { TextInput } from '@strapi/design-system/TextInput';
-import { Button } from '@strapi/design-system/Button';
-import { useNotifyAT } from '@strapi/design-system/LiveRegions';
-import Envelop from '@strapi/icons/Envelop';
-import Configuration from './components/Configuration';
-import schema from '../../utils/schema';
-import pluginPermissions from '../../permissions';
-import { fetchEmailSettings, postEmailTest } from './utils/api';
-import EmailHeader from './components/EmailHeader';
+import { Envelop } from '@strapi/icons';
+import { useIntl } from 'react-intl';
+
+import { PERMISSIONS } from '../../constants';
 import getTrad from '../../utils/getTrad';
+import schema from '../../utils/schema';
+
+import Configuration from './components/Configuration';
+import EmailHeader from './components/EmailHeader';
+import { fetchEmailSettings, postEmailTest } from './utils/api';
 
 const ProtectedSettingsPage = () => (
-  <CheckPagePermissions permissions={pluginPermissions.settings}>
+  <CheckPagePermissions permissions={PERMISSIONS.settings}>
     <SettingsPage />
   </CheckPagePermissions>
 );
@@ -43,6 +48,7 @@ const SettingsPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [testAddress, setTestAddress] = useState('');
+  const [isTestAddressValid, setIsTestAddressValid] = useState(false);
   const [config, setConfig] = useState({
     provider: '',
     settings: { defaultFrom: '', defaultReplyTo: '', testAddress: '' },
@@ -52,7 +58,7 @@ const SettingsPage = () => {
     setIsLoading(true);
 
     fetchEmailSettings()
-      .then(config => {
+      .then((config) => {
         notifyStatus(
           formatMessage({
             id: getTrad('Settings.email.plugin.notification.data.loaded'),
@@ -62,7 +68,7 @@ const SettingsPage = () => {
 
         setConfig(config);
 
-        const testAddressFound = get(config, 'settings.testAddress');
+        const testAddressFound = config?.settings?.testAddress;
 
         if (testAddressFound) {
           setTestAddress(testAddressFound);
@@ -87,11 +93,18 @@ const SettingsPage = () => {
     }
   }, [formErrors]);
 
-  const handleChange = e => {
+  useEffect(() => {
+    schema
+      .validate({ email: testAddress }, { abortEarly: false })
+      .then(() => setIsTestAddressValid(true))
+      .catch(() => setIsTestAddressValid(false));
+  }, [testAddress]);
+
+  const handleChange = (e) => {
     setTestAddress(() => e.target.value);
   };
 
-  const handleSubmit = async event => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
     try {
@@ -150,7 +163,7 @@ const SettingsPage = () => {
       <EmailHeader />
       <ContentLayout>
         <form onSubmit={handleSubmit}>
-          <Stack size={7}>
+          <Flex direction="column" alignItems="stretch" gap={7}>
             <Box
               background="neutral0"
               hasRadius
@@ -171,11 +184,11 @@ const SettingsPage = () => {
               paddingLeft={7}
               paddingRight={7}
             >
-              <Stack size={4}>
+              <Flex direction="column" alignItems="stretch" gap={4}>
                 <Typography variant="delta" as="h2">
                   {formatMessage({
                     id: getTrad('Settings.email.plugin.title.test'),
-                    defaultMessage: 'Send a test mail',
+                    defaultMessage: 'Test email delivery',
                   })}
                 </Typography>
                 <Grid gap={5} alignItems="end">
@@ -186,7 +199,7 @@ const SettingsPage = () => {
                       onChange={handleChange}
                       label={formatMessage({
                         id: getTrad('Settings.email.plugin.label.testAddress'),
-                        defaultMessage: 'Test delivery email address',
+                        defaultMessage: 'Recipient email',
                       })}
                       value={testAddress}
                       error={
@@ -197,20 +210,28 @@ const SettingsPage = () => {
                         })
                       }
                       placeholder={formatMessage({
-                        id: 'Settings.email.plugin.placeholder.testAddress',
+                        id: getTrad('Settings.email.plugin.placeholder.testAddress'),
                         defaultMessage: 'ex: developer@example.com',
                       })}
                     />
                   </GridItem>
                   <GridItem col={7} s={12}>
-                    <Button loading={isSubmitting} type="submit" startIcon={<Envelop />}>
-                      Test email
+                    <Button
+                      loading={isSubmitting}
+                      disabled={!isTestAddressValid}
+                      type="submit"
+                      startIcon={<Envelop />}
+                    >
+                      {formatMessage({
+                        id: getTrad('Settings.email.plugin.button.test-email'),
+                        defaultMessage: 'Send test email',
+                      })}
                     </Button>
                   </GridItem>
                 </Grid>
-              </Stack>
+              </Flex>
             </Box>
-          </Stack>
+          </Flex>
         </form>
       </ContentLayout>
     </Main>

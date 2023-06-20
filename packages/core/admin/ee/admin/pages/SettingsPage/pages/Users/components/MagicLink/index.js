@@ -1,6 +1,8 @@
 import React from 'react';
-import { useIntl } from 'react-intl';
+
 import PropTypes from 'prop-types';
+import { useIntl } from 'react-intl';
+
 import basename from '../../../../../../../../admin/src/core/utils/basename';
 import MagicLinkWrapper from '../../../../../../../../admin/src/pages/SettingsPage/pages/Users/components/MagicLink/MagicLinkWrapper';
 
@@ -15,7 +17,7 @@ const MagicLink = ({ registrationToken }) => {
       >
         {formatMessage({
           id: 'app.components.Users.MagicLink.connect',
-          defaultMessage: 'Send this link to the user for them to connect.',
+          defaultMessage: 'Copy and share this link to give access to this user',
         })}
       </MagicLinkWrapper>
     );

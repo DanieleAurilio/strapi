@@ -1,23 +1,20 @@
 import React from 'react';
+
+import { BaseCheckbox, Box, Flex, IconButton, Tbody, Td, Tr } from '@strapi/design-system';
+import { onRowClick, stopPropagation, useTracking } from '@strapi/helper-plugin';
+import { Duplicate, Pencil, Trash } from '@strapi/icons';
 import PropTypes from 'prop-types';
-import { BaseCheckbox } from '@strapi/design-system/BaseCheckbox';
-import { Box } from '@strapi/design-system/Box';
-import { IconButton } from '@strapi/design-system/IconButton';
-import { Tbody, Td, Tr } from '@strapi/design-system/Table';
-import { Flex } from '@strapi/design-system/Flex';
-import Trash from '@strapi/icons/Trash';
-import Duplicate from '@strapi/icons/Duplicate';
-import Pencil from '@strapi/icons/Pencil';
-import { useTracking, stopPropagation, onRowClick } from '@strapi/helper-plugin';
-import { useHistory } from 'react-router-dom';
 import { useIntl } from 'react-intl';
+import { Link, useHistory } from 'react-router-dom';
+
+import { getFullName } from '../../../../utils';
 import { usePluginsQueryParams } from '../../../hooks';
 import CellContent from '../CellContent';
-import { getFullName } from '../../../../utils';
 
 const TableRows = ({
   canCreate,
   canDelete,
+  contentType,
   headers,
   entriesToDelete,
   onClickDelete,
@@ -38,7 +35,7 @@ const TableRows = ({
   return (
     <Tbody>
       {rows.map((data, index) => {
-        const isChecked = entriesToDelete.findIndex(id => id === data.id) !== -1;
+        const isChecked = entriesToDelete.findIndex((id) => id === data.id) !== -1;
         const itemLineText = formatMessage(
           {
             id: 'content-manager.components.DynamicTable.row-line',
@@ -51,7 +48,7 @@ const TableRows = ({
           <Tr
             key={data.id}
             {...onRowClick({
-              fn: () => {
+              fn() {
                 trackUsage('willEditEntryFromList');
                 push({
                   pathname: `${pathname}/${data.id}`,
@@ -88,6 +85,7 @@ const TableRows = ({
                     <CellContent
                       content={data[name.split('.')[0]]}
                       name={name}
+                      contentType={contentType}
                       {...rest}
                       rowId={data.id}
                     />
@@ -100,13 +98,14 @@ const TableRows = ({
               <Td>
                 <Flex justifyContent="end" {...stopPropagation}>
                   <IconButton
+                    forwardedAs={Link}
                     onClick={() => {
                       trackUsage('willEditEntryFromButton');
-                      push({
-                        pathname: `${pathname}/${data.id}`,
-                        state: { from: pathname },
-                        search: pluginsQueryParams,
-                      });
+                    }}
+                    to={{
+                      pathname: `${pathname}/${data.id}`,
+                      state: { from: pathname },
+                      search: pluginsQueryParams,
                     }}
                     label={formatMessage(
                       { id: 'app.component.table.edit', defaultMessage: 'Edit {target}' },
@@ -119,12 +118,11 @@ const TableRows = ({
                   {canCreate && (
                     <Box paddingLeft={1}>
                       <IconButton
-                        onClick={() => {
-                          push({
-                            pathname: `${pathname}/create/clone/${data.id}`,
-                            state: { from: pathname },
-                            search: pluginsQueryParams,
-                          });
+                        forwardedAs={Link}
+                        to={{
+                          pathname: `${pathname}/create/clone/${data.id}`,
+                          state: { from: pathname },
+                          search: pluginsQueryParams,
                         }}
                         label={formatMessage(
                           {
@@ -144,11 +142,10 @@ const TableRows = ({
                       <IconButton
                         onClick={() => {
                           trackUsage('willDeleteEntryFromList');
-
                           onClickDelete(data.id);
                         }}
                         label={formatMessage(
-                          { id: 'app.component.table.delete', defaultMessage: 'Delete {target}' },
+                          { id: 'global.delete-target', defaultMessage: 'Delete {target}' },
                           { target: itemLineText }
                         )}
                         noBorder
@@ -170,8 +167,8 @@ TableRows.defaultProps = {
   canCreate: false,
   canDelete: false,
   entriesToDelete: [],
-  onClickDelete: () => {},
-  onSelectRow: () => {},
+  onClickDelete() {},
+  onSelectRow() {},
   rows: [],
   withBulkActions: false,
   withMainAction: false,
@@ -180,6 +177,9 @@ TableRows.defaultProps = {
 TableRows.propTypes = {
   canCreate: PropTypes.bool,
   canDelete: PropTypes.bool,
+  contentType: PropTypes.shape({
+    uid: PropTypes.string.isRequired,
+  }).isRequired,
   entriesToDelete: PropTypes.array,
   headers: PropTypes.array.isRequired,
   onClickDelete: PropTypes.func,

@@ -1,40 +1,51 @@
 import React, { useMemo, useState } from 'react';
-import { Button } from '@strapi/design-system/Button';
-import { HeaderLayout, Layout, ContentLayout, ActionLayout } from '@strapi/design-system/Layout';
-import { Main } from '@strapi/design-system/Main';
-import { Table, Tr, Thead, Th } from '@strapi/design-system/Table';
-import { VisuallyHidden } from '@strapi/design-system/VisuallyHidden';
-import { Typography } from '@strapi/design-system/Typography';
-import { useNotifyAT } from '@strapi/design-system/LiveRegions';
-import Plus from '@strapi/icons/Plus';
-import {
-  useTracking,
-  SettingsPageTitle,
-  CheckPermissions,
-  useNotification,
-  useRBAC,
-  NoPermissions,
-  LoadingIndicatorPage,
-  SearchURLQuery,
-  useFocusWhenNavigate,
-  useQueryParams,
-  EmptyStateLayout,
-  ConfirmDialog,
-} from '@strapi/helper-plugin';
-import { useIntl } from 'react-intl';
-import { useHistory } from 'react-router-dom';
-import { useMutation, useQuery, useQueryClient } from 'react-query';
-import matchSorter from 'match-sorter';
 
-import { fetchData, deleteData } from './utils/api';
-import { getTrad } from '../../../utils';
+import {
+  ActionLayout,
+  Button,
+  ContentLayout,
+  HeaderLayout,
+  Layout,
+  Main,
+  Table,
+  Th,
+  Thead,
+  Tr,
+  Typography,
+  useNotifyAT,
+  VisuallyHidden,
+} from '@strapi/design-system';
+import {
+  CheckPermissions,
+  ConfirmDialog,
+  EmptyStateLayout,
+  LoadingIndicatorPage,
+  NoPermissions,
+  SearchURLQuery,
+  SettingsPageTitle,
+  useCollator,
+  useFilter,
+  useFocusWhenNavigate,
+  useNotification,
+  useQueryParams,
+  useRBAC,
+  useTracking,
+} from '@strapi/helper-plugin';
+import { Plus } from '@strapi/icons';
+import { useIntl } from 'react-intl';
+import { useMutation, useQuery, useQueryClient } from 'react-query';
+import { useHistory } from 'react-router-dom';
+
+import { PERMISSIONS } from '../../../constants';
 import pluginId from '../../../pluginId';
-import permissions from '../../../permissions';
+import { getTrad } from '../../../utils';
+
 import TableBody from './components/TableBody';
+import { deleteData, fetchData } from './utils/api';
 
 const RoleListPage = () => {
   const { trackUsage } = useTracking();
-  const { formatMessage } = useIntl();
+  const { formatMessage, locale } = useIntl();
   const { push } = useHistory();
   const toggleNotification = useNotification();
   const { notifyStatus } = useNotifyAT();
@@ -49,10 +60,10 @@ const RoleListPage = () => {
 
   const updatePermissions = useMemo(() => {
     return {
-      create: permissions.createRole,
-      read: permissions.readRoles,
-      update: permissions.updateRole,
-      delete: permissions.deleteRole,
+      create: PERMISSIONS.createRole,
+      read: PERMISSIONS.readRoles,
+      update: PERMISSIONS.updateRole,
+      delete: PERMISSIONS.deleteRole,
     };
   }, []);
 
@@ -68,6 +79,17 @@ const RoleListPage = () => {
   } = useQuery('get-roles', () => fetchData(toggleNotification, notifyStatus), {
     initialData: {},
     enabled: canRead,
+  });
+
+  const { includes } = useFilter(locale, {
+    sensitivity: 'base',
+  });
+
+  /**
+   * @type {Intl.Collator}
+   */
+  const formatter = useCollator(locale, {
+    sensitivity: 'base',
   });
 
   const isLoading = isLoadingForData || isFetching;
@@ -93,12 +115,12 @@ const RoleListPage = () => {
   };
 
   const pageTitle = formatMessage({
-    id: getTrad('HeaderNav.link.roles'),
+    id: 'global.roles',
     defaultMessage: 'Roles',
   });
 
-  const deleteMutation = useMutation(id => deleteData(id, toggleNotification), {
-    onSuccess: async () => {
+  const deleteMutation = useMutation((id) => deleteData(id, toggleNotification), {
+    async onSuccess() {
       await queryClient.invalidateQueries('get-roles');
     },
   });
@@ -110,7 +132,12 @@ const RoleListPage = () => {
     setIsConfirmButtonLoading(false);
   };
 
-  const sortedRoles = matchSorter(roles || [], _q, { keys: ['name', 'description'] });
+  const sortedRoles = (roles || [])
+    .filter((role) => includes(role.name, _q) || includes(role.description, _q))
+    .sort(
+      (a, b) => formatter.compare(a.name, b.name) || formatter.compare(a.description, b.description)
+    );
+
   const emptyContent = _q && !sortedRoles.length ? 'search' : 'roles';
 
   const colCount = 4;
@@ -122,7 +149,7 @@ const RoleListPage = () => {
       <Main aria-busy={isLoading}>
         <HeaderLayout
           title={formatMessage({
-            id: 'Settings.roles.title',
+            id: 'global.roles',
             defaultMessage: 'Roles',
           })}
           subtitle={formatMessage({
@@ -130,8 +157,8 @@ const RoleListPage = () => {
             defaultMessage: 'List of roles',
           })}
           primaryAction={
-            <CheckPermissions permissions={permissions.createRole}>
-              <Button onClick={handleNewRoleClick} startIcon={<Plus />} size="L">
+            <CheckPermissions permissions={PERMISSIONS.createRole}>
+              <Button onClick={handleNewRoleClick} startIcon={<Plus />} size="S">
                 {formatMessage({
                   id: getTrad('List.button.roles'),
                   defaultMessage: 'Add new role',
@@ -161,13 +188,13 @@ const RoleListPage = () => {
                 <Tr>
                   <Th>
                     <Typography variant="sigma" textColor="neutral600">
-                      {formatMessage({ id: getTrad('Roles.name'), defaultMessage: 'Name' })}
+                      {formatMessage({ id: 'global.name', defaultMessage: 'Name' })}
                     </Typography>
                   </Th>
                   <Th>
                     <Typography variant="sigma" textColor="neutral600">
                       {formatMessage({
-                        id: getTrad('Roles.description'),
+                        id: 'global.description',
                         defaultMessage: 'Description',
                       })}
                     </Typography>
@@ -175,7 +202,7 @@ const RoleListPage = () => {
                   <Th>
                     <Typography variant="sigma" textColor="neutral600">
                       {formatMessage({
-                        id: getTrad('Roles.users'),
+                        id: 'global.users',
                         defaultMessage: 'Users',
                       })}
                     </Typography>
@@ -183,7 +210,7 @@ const RoleListPage = () => {
                   <Th>
                     <VisuallyHidden>
                       {formatMessage({
-                        id: 'components.TableHeader.actions-label',
+                        id: 'global.actions',
                         defaultMessage: 'Actions',
                       })}
                     </VisuallyHidden>
@@ -193,7 +220,7 @@ const RoleListPage = () => {
               <TableBody
                 sortedRoles={sortedRoles}
                 canDelete={canDelete}
-                permissions={permissions}
+                permissions={PERMISSIONS}
                 setRoleToDelete={setRoleToDelete}
                 onDelete={[showConfirmDelete, setShowConfirmDelete]}
               />

@@ -100,7 +100,7 @@ node_modules
 ############################
 
 testApp
-coverage
+/coverage/
 
 ############################
 # Strapi
@@ -110,6 +110,7 @@ coverage
 license.txt
 exports
 *.cache
+dist
 build
 documentation
 .strapi-updater.json

@@ -1,6 +1,6 @@
 {
   "name": "@strapi/utils",
-  "version": "4.0.0",
+  "version": "4.11.1",
   "description": "Shared utilities for the Strapi packages",
   "keywords": [
     "strapi",
@@ -28,18 +28,25 @@
     }
   ],
   "main": "./lib",
+  "types": "./index.d.ts",
   "directories": {
     "lib": "./lib"
   },
+  "scripts": {
+    "test:unit": "run -T jest",
+    "test:unit:watch": "run -T jest --watch",
+    "lint": "run -T eslint ."
+  },
   "dependencies": {
     "@sindresorhus/slugify": "1.1.0",
-    "date-fns": "2.24.0",
-    "http-errors": "1.8.0",
+    "date-fns": "2.30.0",
+    "http-errors": "1.8.1",
     "lodash": "4.17.21",
+    "p-map": "4.0.0",
     "yup": "0.32.9"
   },
   "engines": {
-    "node": ">=12.x.x <=16.x.x",
+    "node": ">=14.19.1 <=18.x.x",
     "npm": ">=6.0.0"
   }
 }

@@ -1,77 +1,11 @@
 import formatLayouts, {
-  formatEditRelationsLayoutWithMetas,
   formatLayoutWithMetas,
   formatListLayoutWithMetas,
-  generateRelationQueryInfos,
-  generateRelationQueryInfosForComponents,
   getDisplayedModels,
+  shouldDisplayRelationLink,
 } from '../formatLayouts';
 
-const addressSchema = {
-  uid: 'api::address.address',
-  attributes: {
-    categories: {
-      targetModel: 'api::category.category',
-    },
-  },
-  layouts: {
-    editRelations: ['categories'],
-  },
-  metadatas: {
-    categories: {
-      edit: {
-        mainField: {
-          name: 'name',
-          type: 'string',
-        },
-      },
-    },
-  },
-};
-const simpleModels = [
-  {
-    uid: 'api::category.category',
-    isDisplayed: true,
-    attributes: {
-      name: {
-        type: 'string',
-      },
-    },
-  },
-];
-
 describe('Content Manager | hooks | useFetchContentTypeLayout | utils ', () => {
-  describe('formatEditRelationsLayoutWithMetas', () => {
-    it('should format editRelations layout correctly', () => {
-      const expectedLayout = [
-        {
-          name: 'categories',
-          size: 6,
-          fieldSchema: {
-            targetModel: 'api::category.category',
-          },
-          metadatas: {
-            mainField: {
-              name: 'name',
-              type: 'string',
-            },
-          },
-          queryInfos: {
-            endPoint: '/content-manager/relations/api::address.address/categories',
-            containsKey: 'name_contains',
-            defaultParams: {},
-            shouldDisplayRelationLink: true,
-          },
-          targetModelPluginOptions: {},
-        },
-      ];
-
-      expect(formatEditRelationsLayoutWithMetas(addressSchema, simpleModels)).toEqual(
-        expectedLayout
-      );
-    });
-  });
-
   describe('formatLayouts', () => {
     it('should format the content type and components layouts', () => {
       const models = [
@@ -166,7 +100,6 @@ describe('Content Manager | hooks | useFetchContentTypeLayout | utils ', () => {
           uid: 'contentType',
           layouts: {
             list: [],
-            editRelations: [],
             edit: [
               [{ name: 'dz', size: 12 }],
               [
@@ -494,11 +427,21 @@ describe('Content Manager | hooks | useFetchContentTypeLayout | utils ', () => {
       const data = {
         uid: 'address',
         layouts: {
-          list: ['test', 'categories'],
+          list: ['test', 'categories', 'component'],
         },
         metadatas: {
           test: {
             list: { ok: true },
+          },
+          component: {
+            list: {
+              mainField: {
+                name: 'name',
+                schema: {
+                  type: 'string',
+                },
+              },
+            },
           },
           categories: {
             list: {
@@ -517,6 +460,22 @@ describe('Content Manager | hooks | useFetchContentTypeLayout | utils ', () => {
           categories: {
             type: 'relation',
             targetModel: 'category',
+          },
+          component: {
+            type: 'component',
+            component: 'some.component',
+            repeatable: false,
+          },
+        },
+      };
+      const components = {
+        'some.component': {
+          settings: {
+            mainField: 'name',
+          },
+
+          attributes: {
+            type: 'string',
           },
         },
       };
@@ -540,42 +499,66 @@ describe('Content Manager | hooks | useFetchContentTypeLayout | utils ', () => {
             },
           },
           fieldSchema: { type: 'relation', targetModel: 'category' },
-          queryInfos: { defaultParams: {}, endPoint: 'collection-types/address' },
+        },
+        {
+          name: 'component',
+          key: '__component_key__',
+          metadatas: {
+            mainField: {
+              name: 'name',
+            },
+          },
+          fieldSchema: {
+            type: 'component',
+            component: 'some.component',
+            repeatable: false,
+          },
         },
       ];
 
-      expect(formatListLayoutWithMetas(data)).toEqual(expected);
+      expect(formatListLayoutWithMetas(data, components)).toEqual(expected);
     });
   });
 
-  describe('generateRelationQueryInfos', () => {
-    it('should return an object with the correct keys', () => {
-      expect(generateRelationQueryInfos(addressSchema, 'categories', simpleModels)).toEqual({
-        endPoint: '/content-manager/relations/api::address.address/categories',
-        containsKey: 'name_contains',
-        defaultParams: {},
-        shouldDisplayRelationLink: true,
-      });
-    });
-  });
-
-  describe('generateRelationQueryInfosForComponents', () => {
-    it('should return an object with the correct keys', () => {
-      expect(
-        generateRelationQueryInfosForComponents(
-          addressSchema,
-          'categories',
-          'api::address.address',
-          simpleModels
-        )
-      ).toEqual({
-        endPoint: '/content-manager/relations/api::address.address/categories',
-        containsKey: 'name_contains',
-        defaultParams: {
-          _component: 'api::address.address',
+  describe('shouldDisplayRelationLink', () => {
+    it('should generate shouldDisplayRelationLink = true for displayed models', () => {
+      const MODELS = [
+        {
+          uid: 'api::category.category',
+          isDisplayed: true,
         },
-        shouldDisplayRelationLink: true,
-      });
+      ];
+
+      const SCHEMA_ADDRESS = {
+        uid: 'api::address.address',
+        attributes: {
+          categories: {
+            targetModel: 'api::category.category',
+          },
+        },
+      };
+
+      expect(shouldDisplayRelationLink(SCHEMA_ADDRESS, 'categories', MODELS)).toBeTruthy();
+    });
+
+    it('should generate shouldDisplayRelationLink = false for non displayed models', () => {
+      const MODELS = [
+        {
+          uid: 'api::category.category',
+          isDisplayed: false,
+        },
+      ];
+
+      const SCHEMA_ADDRESS = {
+        uid: 'api::address.address',
+        attributes: {
+          categories: {
+            targetModel: 'api::category.category',
+          },
+        },
+      };
+
+      expect(shouldDisplayRelationLink(SCHEMA_ADDRESS, 'categories', MODELS)).toBeFalsy();
     });
   });
 

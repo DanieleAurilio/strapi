@@ -1,13 +1,15 @@
 import { useEffect, useReducer, useRef } from 'react';
-import { useRBACProvider, useAppInfos, useStrapiApp } from '@strapi/helper-plugin';
-import getPluginSectionLinks from './utils/getPluginSectionLinks';
-import getGeneralLinks from './utils/getGeneralLinks';
+
+import { useAppInfo, useRBACProvider, useStrapiApp } from '@strapi/helper-plugin';
+
 import reducer, { initialState } from './reducer';
+import getGeneralLinks from './utils/getGeneralLinks';
+import getPluginSectionLinks from './utils/getPluginSectionLinks';
 
 const useMenu = () => {
   const [state, dispatch] = useReducer(reducer, initialState);
   const { allPermissions } = useRBACProvider();
-  const { shouldUpdateStrapi } = useAppInfos();
+  const { shouldUpdateStrapi } = useAppInfo();
   const { menu } = useStrapiApp();
 
   // We are using a ref because we don't want our effect to have this in its dependencies array

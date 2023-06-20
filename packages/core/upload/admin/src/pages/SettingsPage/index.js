@@ -1,34 +1,43 @@
 import React, { useEffect, useReducer, useRef } from 'react';
-import { Helmet } from 'react-helmet';
-import { useIntl } from 'react-intl';
+
+import {
+  Box,
+  Button,
+  ContentLayout,
+  Flex,
+  Grid,
+  GridItem,
+  HeaderLayout,
+  Layout,
+  Main,
+  ToggleInput,
+  Typography,
+} from '@strapi/design-system';
 import {
   CheckPagePermissions,
   LoadingIndicatorPage,
+  useFetchClient,
   useFocusWhenNavigate,
   useNotification,
   useOverlayBlocker,
 } from '@strapi/helper-plugin';
-import Check from '@strapi/icons/Check';
-import { Box } from '@strapi/design-system/Box';
-import { Flex } from '@strapi/design-system/Flex';
-import { ToggleInput } from '@strapi/design-system/ToggleInput';
-import { Typography } from '@strapi/design-system/Typography';
-import { Button } from '@strapi/design-system/Button';
-import { Main } from '@strapi/design-system/Main';
-import { Stack } from '@strapi/design-system/Stack';
-import { Grid, GridItem } from '@strapi/design-system/Grid';
-import { ContentLayout, HeaderLayout, Layout } from '@strapi/design-system/Layout';
+import { Check } from '@strapi/icons';
 import axios from 'axios';
 import isEqual from 'lodash/isEqual';
-import { axiosInstance, getRequestUrl, getTrad } from '../../utils';
+import { Helmet } from 'react-helmet';
+import { useIntl } from 'react-intl';
+
+import { PERMISSIONS } from '../../constants';
+import { getRequestUrl, getTrad } from '../../utils';
+
 import init from './init';
 import reducer, { initialState } from './reducer';
-import pluginPermissions from '../../permissions';
 
 export const SettingsPage = () => {
   const { formatMessage } = useIntl();
   const { lockApp, unlockApp } = useOverlayBlocker();
   const toggleNotification = useNotification();
+  const { get, put } = useFetchClient();
   useFocusWhenNavigate();
 
   const [{ initialData, isLoading, isSubmiting, modifiedData }, dispatch] = useReducer(
@@ -47,7 +56,7 @@ export const SettingsPage = () => {
       try {
         const {
           data: { data },
-        } = await axiosInstance.get(getRequestUrl('settings'), {
+        } = await get(getRequestUrl('settings'), {
           cancelToken: source.token,
         });
 
@@ -73,7 +82,7 @@ export const SettingsPage = () => {
 
   const isSaveButtonDisabled = isEqual(initialData, modifiedData);
 
-  const handleSubmit = async e => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (isSaveButtonDisabled) {
@@ -85,7 +94,7 @@ export const SettingsPage = () => {
     dispatch({ type: 'ON_SUBMIT' });
 
     try {
-      await axiosInstance.put(getRequestUrl('settings'), modifiedData);
+      await put(getRequestUrl('settings'), modifiedData);
 
       dispatch({
         type: 'SUBMIT_SUCCEEDED',
@@ -124,7 +133,7 @@ export const SettingsPage = () => {
         <HeaderLayout
           title={formatMessage({
             id: getTrad('settings.header.label'),
-            defaultMessage: 'Media Library - Settings',
+            defaultMessage: 'Media Library',
           })}
           primaryAction={
             <Button
@@ -133,17 +142,17 @@ export const SettingsPage = () => {
               loading={isSubmiting}
               type="submit"
               startIcon={<Check />}
-              size="L"
+              size="S"
             >
               {formatMessage({
-                id: 'app.components.Button.save',
+                id: 'global.save',
                 defaultMessage: 'Save',
               })}
             </Button>
           }
           subtitle={formatMessage({
             id: getTrad('settings.sub-header.label'),
-            defaultMessage: 'Configure the settings for the media library',
+            defaultMessage: 'Configure the settings for the Media Library',
           })}
         />
         <ContentLayout>
@@ -151,14 +160,14 @@ export const SettingsPage = () => {
             <LoadingIndicatorPage />
           ) : (
             <Layout>
-              <Stack size={12}>
+              <Flex direction="column" alignItems="stretch" gap={12}>
                 <Box background="neutral0" padding={6} shadow="filterShadow" hasRadius>
-                  <Stack size={4}>
+                  <Flex direction="column" alignItems="stretch" gap={4}>
                     <Flex>
                       <Typography variant="delta" as="h2">
                         {formatMessage({
-                          id: getTrad('settings.section.image.label'),
-                          defaultMessage: 'Image',
+                          id: getTrad('settings.blockTitle'),
+                          defaultMessage: 'Asset management',
                         })}
                       </Typography>
                     </Flex>
@@ -171,11 +180,11 @@ export const SettingsPage = () => {
                           hint={formatMessage({
                             id: getTrad('settings.form.responsiveDimensions.description'),
                             defaultMessage:
-                              'It automatically generates multiple formats (large, medium, small) of the uploaded asset',
+                              'Enabling this option will generate multiple formats (small, medium and large) of the uploaded asset.',
                           })}
                           label={formatMessage({
                             id: getTrad('settings.form.responsiveDimensions.label'),
-                            defaultMessage: 'Enable responsive friendly upload',
+                            defaultMessage: 'Responsive friendly upload',
                           })}
                           name="responsiveDimensions"
                           offLabel={formatMessage({
@@ -186,7 +195,7 @@ export const SettingsPage = () => {
                             id: 'app.components.ToggleCheckbox.on-label',
                             defaultMessage: 'On',
                           })}
-                          onChange={e => {
+                          onChange={(e) => {
                             handleChange({
                               target: { name: 'responsiveDimensions', value: e.target.checked },
                             });
@@ -198,9 +207,14 @@ export const SettingsPage = () => {
                           aria-label="sizeOptimization"
                           data-testid="sizeOptimization"
                           checked={modifiedData.sizeOptimization}
+                          hint={formatMessage({
+                            id: getTrad('settings.form.sizeOptimization.description'),
+                            defaultMessage:
+                              'Enabling this option will reduce the image size and slightly reduce its quality.',
+                          })}
                           label={formatMessage({
                             id: getTrad('settings.form.sizeOptimization.label'),
-                            defaultMessage: 'Enable size optimization (without quality loss)',
+                            defaultMessage: 'Size optimization',
                           })}
                           name="sizeOptimization"
                           offLabel={formatMessage({
@@ -211,7 +225,7 @@ export const SettingsPage = () => {
                             id: 'app.components.ToggleCheckbox.on-label',
                             defaultMessage: 'On',
                           })}
-                          onChange={e => {
+                          onChange={(e) => {
                             handleChange({
                               target: { name: 'sizeOptimization', value: e.target.checked },
                             });
@@ -226,11 +240,11 @@ export const SettingsPage = () => {
                           hint={formatMessage({
                             id: getTrad('settings.form.autoOrientation.description'),
                             defaultMessage:
-                              'Automatically rotate image according to EXIF orientation tag',
+                              'Enabling this option will automatically rotate the image according to EXIF orientation tag.',
                           })}
                           label={formatMessage({
                             id: getTrad('settings.form.autoOrientation.label'),
-                            defaultMessage: 'Enable auto orientation',
+                            defaultMessage: 'Auto orientation',
                           })}
                           name="autoOrientation"
                           offLabel={formatMessage({
@@ -241,7 +255,7 @@ export const SettingsPage = () => {
                             id: 'app.components.ToggleCheckbox.on-label',
                             defaultMessage: 'On',
                           })}
-                          onChange={e => {
+                          onChange={(e) => {
                             handleChange({
                               target: { name: 'autoOrientation', value: e.target.checked },
                             });
@@ -249,9 +263,9 @@ export const SettingsPage = () => {
                         />
                       </GridItem>
                     </Grid>
-                  </Stack>
+                  </Flex>
                 </Box>
-              </Stack>
+              </Flex>
             </Layout>
           )}
         </ContentLayout>
@@ -261,7 +275,7 @@ export const SettingsPage = () => {
 };
 
 const ProtectedSettingsPage = () => (
-  <CheckPagePermissions permissions={pluginPermissions.settings}>
+  <CheckPagePermissions permissions={PERMISSIONS.settings}>
     <SettingsPage />
   </CheckPagePermissions>
 );

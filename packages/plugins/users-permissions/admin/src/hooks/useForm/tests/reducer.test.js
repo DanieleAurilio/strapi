@@ -1,4 +1,5 @@
 import produce from 'immer';
+
 import reducer from '../reducer';
 
 describe('USERS PERMISSIONS | HOOKS | useForm | reducer', () => {
@@ -28,7 +29,7 @@ describe('USERS PERMISSIONS | HOOKS | useForm | reducer', () => {
       state.isLoading = false;
       state.modifiedData = true;
 
-      const expected = produce(state, draft => {
+      const expected = produce(state, (draft) => {
         draft.isLoading = true;
         draft.modifiedData = {};
       });
@@ -55,7 +56,7 @@ describe('USERS PERMISSIONS | HOOKS | useForm | reducer', () => {
         data,
       };
 
-      const expected = produce(state, draft => {
+      const expected = produce(state, (draft) => {
         draft.isLoading = false;
         draft.modifiedData = data;
       });
@@ -72,7 +73,7 @@ describe('USERS PERMISSIONS | HOOKS | useForm | reducer', () => {
 
       state.isLoading = false;
 
-      const expected = produce(state, draft => {
+      const expected = produce(state, (draft) => {
         draft.isLoading = true;
       });
 
@@ -86,7 +87,7 @@ describe('USERS PERMISSIONS | HOOKS | useForm | reducer', () => {
 
       const action = { type: 'ON_SUBMIT_SUCCEEDED', data: { test: true, foo: 'bar' } };
 
-      const expected = produce(state, draft => {
+      const expected = produce(state, (draft) => {
         draft.modifiedData = { test: true, foo: 'bar' };
       });
 

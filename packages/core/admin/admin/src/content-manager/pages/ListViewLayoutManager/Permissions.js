@@ -1,11 +1,12 @@
 import React, { memo, useMemo } from 'react';
+
+import { difference, LoadingIndicatorPage, useRBAC } from '@strapi/helper-plugin';
 import PropTypes from 'prop-types';
-import { useRBAC, LoadingIndicatorPage, difference } from '@strapi/helper-plugin';
 
-import ListView from '../ListView';
 import { generatePermissionsObject } from '../../utils';
+import ListView from '../ListView';
 
-const Permissions = props => {
+const Permissions = (props) => {
   const viewPermissions = useMemo(() => generatePermissionsObject(props.slug), [props.slug]);
 
   const { isLoading, allowedActions } = useRBAC(viewPermissions, props.permissions);
@@ -35,7 +36,7 @@ export default memo(Permissions, (prev, next) => {
   // this hack prevents this
   // TODO at some point we will need to refacto the LV and migrate to react-query
   const propNamesThatHaveChanged = Object.keys(differenceBetweenRerenders).filter(
-    propName => propName !== 'state'
+    (propName) => propName !== 'state'
   );
 
   return propNamesThatHaveChanged.length > 0;

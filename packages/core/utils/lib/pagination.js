@@ -27,12 +27,20 @@ const withMaxLimit = (limit, maxLimit = -1) => {
 // Ensure minimum page & pageSize values (page >= 1, pageSize >= 0, start >= 0, limit >= 0)
 const ensureMinValues = ({ start, limit }) => ({
   start: Math.max(start, 0),
-  limit: Math.max(limit, 1),
+  limit: limit === -1 ? limit : Math.max(limit, 1),
 });
 
-const ensureMaxValues = (maxLimit = -1) => ({ start, limit }) => ({
-  start,
-  limit: withMaxLimit(limit, maxLimit),
+const ensureMaxValues =
+  (maxLimit = -1) =>
+  ({ start, limit }) => ({
+    start,
+    limit: withMaxLimit(limit, maxLimit),
+  });
+
+// Apply maxLimit as the limit when limit is -1
+const withNoLimit = (pagination, maxLimit = -1) => ({
+  ...pagination,
+  limit: pagination.limit === -1 ? maxLimit : pagination.limit,
 });
 
 const withDefaultPagination = (args, { defaults = {}, maxLimit = -1 } = {}) => {
@@ -41,10 +49,7 @@ const withDefaultPagination = (args, { defaults = {}, maxLimit = -1 } = {}) => {
   const usePagePagination = !isNil(args.page) || !isNil(args.pageSize);
   const useOffsetPagination = !isNil(args.start) || !isNil(args.limit);
 
-  const ensureValidValues = pipe(
-    ensureMinValues,
-    ensureMaxValues(maxLimit)
-  );
+  const ensureValidValues = pipe(ensureMinValues, ensureMaxValues(maxLimit));
 
   // If there is no pagination attribute, don't modify the payload
   if (!usePagePagination && !useOffsetPagination) {
@@ -67,13 +72,19 @@ const withDefaultPagination = (args, { defaults = {}, maxLimit = -1 } = {}) => {
 
   // Page / PageSize
   if (usePagePagination) {
-    const { page, pageSize } = merge(defaultValues.page, args);
+    const { page, pageSize } = merge(defaultValues.page, {
+      ...args,
+      pageSize: Math.max(1, args.pageSize),
+    });
 
     Object.assign(pagination, {
       start: (page - 1) * pageSize,
       limit: pageSize,
     });
   }
+
+  // Handle -1 limit
+  Object.assign(pagination, withNoLimit(pagination, maxLimit));
 
   const replacePaginationAttributes = pipe(
     // Remove pagination attributes
