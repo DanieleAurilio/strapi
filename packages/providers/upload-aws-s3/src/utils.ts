@@ -1,3 +1,6 @@
+import type { AwsCredentialIdentity } from '@aws-sdk/types';
+import type { InitOptions } from '.';
+
 const ENDPOINT_PATTERN = /^(.+\.)?s3[.-]([a-z0-9-]+)\./;
 
 interface BucketInfo {
@@ -5,14 +8,13 @@ interface BucketInfo {
   err?: string;
 }
 
-export function isUrlFromBucket(fileUrl: string, bucketName: string, bucketBaseUrl = ''): boolean {
+export function isUrlFromBucket(fileUrl: string, bucketName: string, baseUrl = ''): boolean {
   const url = new URL(fileUrl);
 
   // Check if the file URL is using a base URL (e.g. a CDN).
-  // In this case, check if the file URL starts with the same base URL as the bucket URL.
-  if (bucketBaseUrl) {
-    const baseUrl = new URL(bucketBaseUrl);
-    return url.href.startsWith(baseUrl.href);
+  // In this case do not sign the URL.
+  if (baseUrl) {
+    return false;
   }
 
   const { bucket } = getBucketFromAwsUrl(fileUrl);
@@ -85,3 +87,32 @@ function getBucketFromAwsUrl(fileUrl: string): BucketInfo {
   // https://<bucket-name>.s3.amazonaws.com/
   return { bucket: prefix.substring(0, prefix.length - 1) };
 }
+
+// TODO Remove this in V5 since we will only support the new config structure
+export const extractCredentials = (options: InitOptions): AwsCredentialIdentity | null => {
+  // legacy
+  if (options.accessKeyId && options.secretAccessKey) {
+    return {
+      accessKeyId: options.accessKeyId,
+      secretAccessKey: options.secretAccessKey,
+    };
+  }
+  // Legacy
+  if (options.s3Options?.accessKeyId && options.s3Options.secretAccessKey) {
+    process.emitWarning(
+      'Credentials passed directly to s3Options is deprecated and will be removed in a future release. Please wrap them inside a credentials object.'
+    );
+    return {
+      accessKeyId: options.s3Options.accessKeyId,
+      secretAccessKey: options.s3Options.secretAccessKey,
+    };
+  }
+  // V5
+  if (options.s3Options?.credentials) {
+    return {
+      accessKeyId: options.s3Options.credentials.accessKeyId,
+      secretAccessKey: options.s3Options.credentials.secretAccessKey,
+    };
+  }
+  return null;
+};
